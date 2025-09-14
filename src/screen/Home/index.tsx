@@ -1,9 +1,10 @@
 // src/screens/HomeScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Dimensions, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../themes/color';
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
@@ -126,6 +127,7 @@ export default function HomeScreen() {
  
   return (
     <ScrollView contentContainerStyle={styles.container}>
+    <StatusBar hidden={false} barStyle={'dark-content'} />
      <View style={styles.Header} >
      <TouchableOpacity style={styles.refreshBtn} onPress={()=>fetchData(true)}>
           <Text style={styles.btnText}>Refresh</Text>
@@ -140,11 +142,17 @@ export default function HomeScreen() {
       <TouchableOpacity
         style={styles.card}
         activeOpacity={0.85}
-        onPress={() => navigation.navigate('Departments', { lpoList })}
-      >
-        <Text style={styles.cardTitle}>Pending Approvals</Text>
-        <Text style={styles.cardToken} numberOfLines={1}>{token}</Text>
+        onPress={() => navigation.navigate('companyLpo', { lpoList })}>
+        <Text style={styles.cardTitle}>LPO Pending Approvals</Text>
+        {/* <Text style={styles.cardToken} numberOfLines={1}>{token}</Text> */}
         <Text style={styles.cardCount}>{pendingCount}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('Ceo_Dashboard')}>
+        <Text style={styles.cardTitle}>RFP Performance Report</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -152,8 +160,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 24,
-    paddingTop: 30,
+    padding: width>600 ?24:20,
+    paddingTop:width>600 ?25:50, 
     backgroundColor: Colors.Bg,
     flexGrow: 1,
   },
@@ -171,7 +179,7 @@ const styles = StyleSheet.create({
    marginBottom:30
   },
   title: {
-    fontSize: 28,
+    fontSize: width>600 ?28:18,
     fontWeight: '700',
     color: Colors.PrimaryColor,
     textAlign: 'center',
@@ -184,33 +192,35 @@ const styles = StyleSheet.create({
   },
   refreshBtn: {
     backgroundColor: Colors.PrimaryColor,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 14,
+    paddingVertical:  width>600 ?10:6,
+    paddingHorizontal:  width>600 ?24:8,
+    borderRadius:  width>600 ?14:7,
   },
   logoutBtn: {
     backgroundColor:'#d9534f',
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 14,
+    paddingVertical:  width>600 ?10:6,
+    paddingHorizontal:  width>600 ?24:8,
+    borderRadius:  width>600 ?14:7,
 
   },
   btnText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize:  width>600 ?16:14, 
     fontWeight: '600',
   },
   card: {
     backgroundColor: Colors.White,
     borderRadius: 20,
-    paddingVertical: 40,
-    paddingHorizontal: 25,
+    height:150,
+    width:'100%',
+    justifyContent:"center",
     alignItems: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowOffset: { width: 0, height: 5 },
     shadowRadius: 10,
-    elevation: 6,
+    marginTop:10
+
   },
   cardTitle: {
     fontSize: 22,

@@ -1,17 +1,20 @@
 // src/screens/DepartmentsScreen.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Dimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import _ from 'lodash';
 import { Colors } from '../../../themes/color';
 import CustomHeader from '../../../component/customHeader';
+const { width } = Dimensions.get('window');
 
-export default function DepartmentsScreen() {
+
+
+export default function CompanyLpo() {
   const navigation = useNavigation();
   const route = useRoute();
   const { lpoList } = route.params;
 
-  const grouped = _.groupBy(lpoList, item => item.Department || 'Unassigned');
+  const grouped = _.groupBy(lpoList, item => item.Company || 'Unassigned');
   const departmentData = Object.entries(grouped).map(([department, items]) => ({
     department,
     count: items.length,
@@ -22,9 +25,7 @@ export default function DepartmentsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-       <CustomHeader title='Back' />
-        <Text style={styles.headerTitle}>Departments</Text>
-        <View style={{ width: 50 }} /> {/* Spacer for symmetry */}
+       <CustomHeader title='Companies' />
       </View>
 
       {/* Department List */}
@@ -59,13 +60,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.Bg,
     paddingHorizontal: 20,
-    paddingTop: 30,
+    paddingTop:width>600 ?25:50, 
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 10,
   },
   backText: {
     fontSize: 16,
@@ -88,7 +89,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 4,
-    elevation: 3,
+
   },
   cardContent: {
     flexDirection: 'row',

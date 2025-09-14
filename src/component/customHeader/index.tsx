@@ -1,9 +1,13 @@
 // components/CustomHeader.tsx
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Back } from '../../themes/images';
+import { Colors } from '../../themes/color';
+const { width } = Dimensions.get('window');
+
+
 
 interface CustomHeaderProps {
   title: string;
@@ -21,7 +25,7 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ title, showBackButton = tru
     <View style={styles.header}>
       {showBackButton && (
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-         <Image source={Back} style={{width:30,  height:30,tintColor:'black' }} />
+         <Image source={Back} style={styles.icon} />
         </TouchableOpacity>
       )}
       <Text style={styles.title}>{title}</Text>
@@ -35,13 +39,19 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-  
+    marginBottom:10
   },
+  icon:{
+    height:width>600?30:24,
+    width:width>600?30:24,
+    tintColor:Colors.PrimaryColor
+  },
+
   backButton: {
-    marginRight: 16,
+    marginRight: width>600?16:6,
   },
   title: {
-    fontSize: 24,
+    fontSize: width>600?24:16,
     color: 'black',
     fontWeight: 'bold',
   },
