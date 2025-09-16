@@ -124,6 +124,73 @@ export const getAllTrialBalances = async (): Promise<any[]> => {
 };
 
 
+// Filter By Company Name
+
+// New function for filtering
+export const getTrialBalanceByCompany = async (companyName: string): Promise<any[]> => {
+  try {
+    const db = await getDB();
+    const results: any[] = [];
+
+    await new Promise<void>((resolve, reject) => {
+      db.transaction(
+        (tx) => {
+          tx.executeSql(
+            "SELECT * FROM trial_balance WHERE company = ?",
+            [companyName],
+            (_, res) => {
+              for (let i = 0; i < res.rows.length; i++) {
+                const row = res.rows.item(i);
+                results.push({
+                  ...row,
+                  balances: JSON.parse(row.balances),
+                });
+              }
+              resolve();
+            },
+            (_, error) => {
+              console.log("❌ Fetch error inside transaction:", error);
+              reject(error);
+              return false;
+            }
+          );
+        },
+        (txError) => {
+          console.log("❌ Transaction error:", txError);
+          reject(txError);
+        }
+      );
+    });
+
+    return results;
+  } catch (err) {
+    console.log("❌ Fetch exception:", err);
+    return [];
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // // /src/database/trialBalanceQueries.ts
 // import { getDB } from './db';

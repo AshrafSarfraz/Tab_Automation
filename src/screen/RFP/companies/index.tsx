@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ImageBackground, Dimensions, StyleSheet, } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity,StyleSheet, } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors } from '../../../themes/color';
+
 
 
 
 
 const images = [
-  { id: '1', text: 'West Walk Real Estate', category: 'West Walk Real Estate'},
-  { id: '2', text: 'Assets Services Company', category: 'Assets Services Company' },
-  { id: '3', text: 'West Walk Advertisement', category: 'West Walk Advertisement' },
-  { id: '5', text: 'West Walk Group', category: 'West Walk Group'},
+  { id: '1', text: 'West Walk Real Estate', companyName: 'West Walk Real Estate'},
+  { id: '2', text: 'Assets Services Company', companyName: 'Assets Services Company' },
+  { id: '3', text: 'West Walk Advertisement', companyName: 'West Walk Advertisement' },
+  { id: '5', text: 'West Walk Group', companyName: 'West Walk Group'},
 
 ];
 
@@ -32,8 +32,8 @@ const Companies:React.FC<CategoriesProps> = () => {
         data={images}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity  style={styles.Flatlist_Cont} onPress={() => navigation.navigate('CategoriesScreen', { item })}>
-            <Text style={styles.Txt} >{item.category}</Text>
+          <TouchableOpacity  style={styles.Flatlist_Cont} onPress={() => navigation.navigate('SelectedCompany', { item })}>
+            <Text style={styles.Txt} >{item.companyName}</Text>
           </TouchableOpacity>
         )}
       />

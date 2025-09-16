@@ -14,6 +14,7 @@ import CompanyLpo from '../screen/LPO/companies';
 import Ceo_Dashboard from '../screen/RFP/main_dashboard';
 import Westwalk from '../screen/RFP/Westwalk';
 import TrialBalanceList from '../screen/RFP/Westwalk/OfflineData';
+import SelectedCmpTrailBalance from '../screen/RFP/SelectedCompany';
 
 
 
@@ -51,9 +52,15 @@ const StackNavigation = () => {
         <Stack.Screen name="LpoList" component={LpoListScreen} />
         <Stack.Screen name="WebView" component={WebViewScreen} />
 
+
+
         <Stack.Screen name="Ceo_Dashboard" component={Ceo_Dashboard} />
+        <Stack.Screen name="SelectedCompany" component={SelectedCmpTrailBalance} />
+
+
         <Stack.Screen name="Westwalk" component={Westwalk} />
         <Stack.Screen name="TrialBalanceList" component={TrialBalanceList} />
+
 
 
       </Stack.Navigator>
