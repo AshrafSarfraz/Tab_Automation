@@ -13,6 +13,7 @@ import WebViewScreen from '../screen/LPO/WebView';
 import CompanyLpo from '../screen/LPO/companies';
 import Ceo_Dashboard from '../screen/RFP/main_dashboard';
 import Westwalk from '../screen/RFP/Westwalk';
+import TrialBalanceList from '../screen/RFP/Westwalk/OfflineData';
 
 
 
@@ -52,6 +53,8 @@ const StackNavigation = () => {
 
         <Stack.Screen name="Ceo_Dashboard" component={Ceo_Dashboard} />
         <Stack.Screen name="Westwalk" component={Westwalk} />
+        <Stack.Screen name="TrialBalanceList" component={TrialBalanceList} />
+
 
       </Stack.Navigator>
     </NavigationContainer>

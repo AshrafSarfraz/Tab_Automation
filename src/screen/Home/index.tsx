@@ -1,111 +1,58 @@
-// src/screens/HomeScreen.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Dimensions, StatusBar } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../themes/color';
+import { fetchLpoList, getAuthToken } from '../../Api\'s';
+
+
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
-  const [lpoList, setLpoList] = useState([]);
-  const [token, setToken]=useState('')
+  const [lpoList, setLpoList] = useState<any[]>([]);
+  const [token, setToken] = useState('');
   const navigation = useNavigation();
 
   useEffect(() => {
-    fetchData();
+    loadData();
   }, []);
 
-  const fetchData = async (forceRefresh = false) => {
+  const loadData = async (forceRefresh = false) => {
     try {
       setLoading(true);
-  
+
       const userData = await AsyncStorage.getItem('user');
       const parsedUser = JSON.parse(userData);
-  
+
       if (!parsedUser) {
         Alert.alert('Error', 'User not found. Please log in again.');
         return;
       }
-  
-      const cmpseq = parsedUser?.cmpseq;
+
       const username = parsedUser?.username;
-      const now = Date.now();
-  
-      let finalToken = null;
-  
-      const storedTokenData = await AsyncStorage.getItem('authTokenData');
-      if (storedTokenData && !forceRefresh) {
-        const parsed = JSON.parse(storedTokenData);
-        const tokenAge = now - parsed.createdAt;
-  
-        if (tokenAge < 60 * 60 * 1000) {
-          // Less than 1 hour
-          finalToken = parsed.token;
-          console.log('✅ Using saved token:', finalToken);
-        } else {
-          console.log('⚠️ Token expired.');
-          await AsyncStorage.removeItem('authTokenData');
-        }
-      }
-  
-      // If no valid token, generate new one
-      if (!finalToken) {
-        console.log('🔐 Fetching new token...');
-        const loginRes = await fetch('http://185.247.89.149:9507/api/Authentication/Dolph_Login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            pageindex:
-              'eyJVc2VybmFtZSI6InJveWFvQHNvZnR3YXJlZGVzaWduLmNvbS5sYiIsIlBhc3N3b3JkIjoiREI4ajlWWjQiLCJEYXRhYmFzZSI6IldFU1RXQUxLIn0=',
-          }),
-        });
-  
-        const loginData = await loginRes.json();
-        const authKey = loginData?.authkey;
-        if (!authKey) throw new Error('authkey not found');
-  
-        finalToken = authKey;
-        await AsyncStorage.setItem('authTokenData', JSON.stringify({ token: finalToken, createdAt: now }));
-      }
-  
-      // Save to display only
-      setToken(finalToken);
-  
-      // Call LPO API
-      const lpoRes = await fetch('http://185.247.89.149:9507/api/externallpo/lpolistexternal', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authentication: finalToken,
-        },
-        // body: JSON.stringify({ cmpseq, username }),  specific company only
-        body: JSON.stringify({ username }),
-      });
-  
-      const data = await lpoRes.json();
-  
-      if (!data || data.status === 'Unauthorized') {
-        await AsyncStorage.removeItem('authTokenData');
-        Alert.alert('Session Expired', 'Please refresh again.');
+
+      // Get token
+      const authToken = await getAuthToken(forceRefresh);
+      if (!authToken) {
+        Alert.alert('Error', 'Failed to get auth token.');
         return;
       }
-  
-      setLpoList(data.listlpo || []);
-      setPendingCount((data.listlpo || []).length);
-  
-    } catch (err) {
-      console.error('Fetch error:', err);
+      setToken(authToken);
+
+      // Get LPO list
+      const list = await fetchLpoList(username, authToken);
+      setLpoList(list);
+      setPendingCount(list.length);
+
+    } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to fetch data.');
     } finally {
       setLoading(false);
     }
   };
-  
-  
+
   const handleLogout = async () => {
     await AsyncStorage.removeItem('user');
     await AsyncStorage.removeItem('authTokenData');
@@ -124,15 +71,14 @@ export default function HomeScreen() {
     );
   }
 
- 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-    <StatusBar hidden={false} barStyle={'dark-content'} />
-     <View style={styles.Header} >
-     <TouchableOpacity style={styles.refreshBtn} onPress={()=>fetchData(true)}>
+      <StatusBar hidden={false} barStyle={'dark-content'} />
+      <View style={styles.Header}>
+        <TouchableOpacity style={styles.refreshBtn} onPress={() => loadData(true)}>
           <Text style={styles.btnText}>Refresh</Text>
         </TouchableOpacity>
-      <Text style={styles.title}>Al-Wessil Holding</Text>
+        <Text style={styles.title}>Al-Wessil Holding</Text>
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.btnText}>Logout</Text>
         </TouchableOpacity>
@@ -144,7 +90,6 @@ export default function HomeScreen() {
         activeOpacity={0.85}
         onPress={() => navigation.navigate('companyLpo', { lpoList })}>
         <Text style={styles.cardTitle}>LPO Pending Approvals</Text>
-        {/* <Text style={styles.cardToken} numberOfLines={1}>{token}</Text> */}
         <Text style={styles.cardCount}>{pendingCount}</Text>
       </TouchableOpacity>
 
@@ -157,6 +102,8 @@ export default function HomeScreen() {
     </ScrollView>
   );
 }
+
+// ...styles remain unchanged
 
 const styles = StyleSheet.create({
   container: {
