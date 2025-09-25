@@ -3,8 +3,8 @@ export const accountMapping = {
 
     // ===== Revenue (4xxxx) =====
      "41112": { company: "West Walk Real Estate", component: "Commercial", type: "Revenue" },
-     "44131": { company: "West Walk Real Estate", component: "Commercial", type: "Revenue" },
-     "44132": { company: "West Walk Real Estate", component: "Commercial", type: "Revenue" },
+     "44131": { company: "West Walk Real Estate", component: "Kiosks", type: "Revenue" },
+     "44132": { company: "West Walk Real Estate", component: "Plenty-Fee", type: "Revenue" },
      "41111": { company: "West Walk Real Estate", component: "Residential", type: "Revenue" },
      "44133": { company: "West Walk Real Estate", component: "Valet", type: "Revenue" },
      "44105": { company: "West Walk Real Estate", component: "Turnover Rent", type: "Revenue" },
@@ -25,7 +25,7 @@ export const accountMapping = {
    
    
 
-     "54109": { company: "West Walk Real Estate", component: "Kahromaa", type: "Cost" },
+     "54109": { company: "West Walk Real Estate", component: "Kahramaa", type: "Cost" },
      "64115": { company: "West Walk Real Estate", component: "Internet / Telephones", type: "Cost" },
      "64114": { company: "West Walk Real Estate", component: "Office supply and pantry / Petrol & Car Service", type: "Cost" },
      "64102": { company: "West Walk Real Estate", component: "Professional & Legal", type: "Cost" },
@@ -49,16 +49,16 @@ export const accountMapping = {
    
    
 
-     "61101": { company: "West Walk Group", component: "Man Power - Office Staff", type: "Cost" },
-     "61103": { company: "West Walk Group", component: "Man Power - Office Staff", type: "Cost" },
-     "61104": { company: "West Walk Group", component: "Man Power - Office Staff", type: "Cost" },
-     "61105": { company: "West Walk Group", component: "Man Power - Office Staff", type: "Cost" },
-     "61106": { company: "West Walk Group", component: "Man Power - Office Staff", type: "Cost" },
-     "61115": { company: "West Walk Group", component: "Man Power - Office Staff", type: "Cost" },
-     "61116": { company: "West Walk Group", component: "Man Power - Office Staff", type: "Cost" },
-     "64101": { company: "West Walk Group", component: "Man Power - Office Staff", type: "Cost" },
-     "64105": { company: "West Walk Group", component: "Man Power - Office Staff", type: "Cost" },
-     "64121": { company: "West Walk Group", component: "Man Power - Office Staff", type: "Cost" },
+     "61101": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+     "61103": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+     "61104": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+     "61105": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+     "61106": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+     "61115": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+     "61116": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+     "64101": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+     "64105": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+     "64121": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
    
 
     "64117": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },

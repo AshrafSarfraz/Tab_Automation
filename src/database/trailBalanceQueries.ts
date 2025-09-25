@@ -1,7 +1,22 @@
-// /src/database/trialBalanceQueries.ts
 import { getDB } from './db';
 
-// Create table
+export interface TrialBalanceRow {
+  id: number;
+  company: string;
+  type: string;
+  component: string;
+  cc2: string;
+  cc2code: string;
+  cc3code: string | null;
+  accountno: string;
+  accountnoname: string;
+  auxcode: string;
+  month: number;
+  year: number;
+  balanceFirst: number;
+}
+
+// 1️⃣ Create table
 export const createTrialBalanceTable = async () => {
   try {
     const db = await getDB();
@@ -11,16 +26,15 @@ export const createTrialBalanceTable = async () => {
         company TEXT,
         type TEXT,
         component TEXT,
-        month INTEGER,
-        year INTEGER,
+        cc2 TEXT,
+        cc2code TEXT,
+        cc3code TEXT,
         accountno TEXT,
         accountnoname TEXT,
         auxcode TEXT,
-        cc2 TEXT,
-        cc2code TEXT,
-        cc3 TEXT,
-        cc3code TEXT,
-        balances TEXT
+        month INTEGER,
+        year INTEGER,
+        balanceFirst REAL
       );`
     );
     console.log('✅ Trial Balance table created');
@@ -29,62 +43,54 @@ export const createTrialBalanceTable = async () => {
   }
 };
 
-// Insert multiple records safely in one transaction
-export const insertMultipleTrialBalances = async (records: any[]) => {
+// 2️⃣ Insert multiple records
+export const insertMultipleTrialBalances = async (records: TrialBalanceRow[]) => {
   if (!records.length) return;
 
   try {
     const db = await getDB();
 
-    // Ensure table exists
+    // Optional: drop old table and recreate
+    await db.executeSql('DROP TABLE IF EXISTS trial_balance');
     await createTrialBalanceTable();
 
     db.transaction(
       (tx) => {
-        // Clear old data to prevent duplicates
-        tx.executeSql('DELETE FROM trial_balance');
-
-        // Insert all records
         for (let data of records) {
           tx.executeSql(
             `INSERT INTO trial_balance 
-              (company, type, component, month, year, accountno, accountnoname, auxcode, cc2, cc2code, cc3, cc3code, balances)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              (company, type, component, cc2, cc2code, cc3code, accountno, accountnoname, auxcode, month, year, balanceFirst)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-              data.company,
-              data.type,
-              data.component,
-              data.month,
-              data.year,
-              data.accountno,
-              data.accountnoname,
-              data.auxcode,
-              data.cc2,
-              data.cc2code,
-              data.cc3,
-              data.cc3code,
-              JSON.stringify(data.balances),
+              data.company || '',
+              data.type || '',
+              data.component || '',
+              data.cc2 || '',
+              data.cc2code || '',
+              data.cc3code || '',
+              data.accountno || '',
+              data.accountnoname || '',
+              data.auxcode || '',
+              data.month || 0,
+              data.year || 0,
+              data.balanceFirst || 0,
             ]
           );
         }
       },
-      (error) => {
-        console.log('❌ Bulk insert transaction failed:', error);
-      },
-      () => {
-        console.log(`✅ ${records.length} records inserted (transaction complete)`);
-      }
+      (error) => console.log('❌ Transaction failed:', error),
+      () => console.log(`✅ ${records.length} records inserted`)
     );
   } catch (err) {
-    console.log('❌ Bulk insert exception:', err);
+    console.log('❌ Insert exception:', err);
   }
 };
 
-// Fetch all records
-export const getAllTrialBalances = async (): Promise<any[]> => {
+// 3️⃣ Fetch all records
+export const getAllTrialBalances = async (): Promise<TrialBalanceRow[]> => {
   try {
     const db = await getDB();
-    const results: any[] = [];
+    const results: TrialBalanceRow[] = [];
 
     await new Promise<void>((resolve, reject) => {
       db.transaction(
@@ -96,8 +102,73 @@ export const getAllTrialBalances = async (): Promise<any[]> => {
               for (let i = 0; i < res.rows.length; i++) {
                 const row = res.rows.item(i);
                 results.push({
-                  ...row,
-                  balances: JSON.parse(row.balances),
+                  id: row.id,
+                  company: row.company || '',
+                  type: row.type || '',
+                  component: row.component || '',
+                  cc2: row.cc2 || '',
+                  cc2code: row.cc2code || '',
+                  cc3code: row.cc3code || null,
+                  accountno: row.accountno || '',
+                  accountnoname: row.accountnoname || '',
+                  auxcode: row.auxcode || '',
+                  month: row.month || 0,
+                  year: row.year || 0,
+                  balanceFirst: row.balanceFirst || 0,
+                });
+              }
+              resolve();
+            },
+            (_, error) => {
+              console.log('❌ Fetch error:', error);
+              reject(error);
+              return false;
+            }
+          );
+        },
+        (txError) => {
+          console.log('❌ Transaction error:', txError);
+          reject(txError);
+        }
+      );
+    });
+
+    return results;
+  } catch (err) {
+    console.log('❌ Fetch exception:', err);
+    return [];
+  }
+};
+
+// 4️⃣ Fetch by company
+export const getTrialBalanceByCompany = async (companyName: string): Promise<TrialBalanceRow[]> => {
+  try {
+    const db = await getDB();
+    const results: TrialBalanceRow[] = [];
+
+    await new Promise<void>((resolve, reject) => {
+      db.transaction(
+        (tx) => {
+          tx.executeSql(
+            'SELECT * FROM trial_balance WHERE company = ?',
+            [companyName],
+            (_, res) => {
+              for (let i = 0; i < res.rows.length; i++) {
+                const row = res.rows.item(i);
+                results.push({
+                  id: row.id,
+                  company: row.company || '',
+                  type: row.type || '',
+                  component: row.component || '',
+                  cc2: row.cc2 || '',
+                  cc2code: row.cc2code || '',
+                  cc3code: row.cc3code || null,
+                  accountno: row.accountno || '',
+                  accountnoname: row.accountnoname || '',
+                  auxcode: row.auxcode || '',
+                  month: row.month || 0,
+                  year: row.year || 0,
+                  balanceFirst: row.balanceFirst || 0,
                 });
               }
               resolve();
@@ -124,39 +195,61 @@ export const getAllTrialBalances = async (): Promise<any[]> => {
 };
 
 
-// Filter By Company Name
 
-// New function for filtering
-export const getTrialBalanceByCompany = async (companyName: string): Promise<any[]> => {
+
+
+
+export interface PnLRow {
+  year: number;
+  totalRevenue: number;
+  totalCost: number;
+  netProfit: number;
+}
+
+export const getOverallPnL = async (): Promise<PnLRow[]> => {
   try {
     const db = await getDB();
-    const results: any[] = [];
+    const results: PnLRow[] = [];
 
     await new Promise<void>((resolve, reject) => {
       db.transaction(
         (tx) => {
           tx.executeSql(
-            "SELECT * FROM trial_balance WHERE company = ?",
-            [companyName],
+            `SELECT year,
+                    -- Revenue hamesha positive
+                    SUM(CASE WHEN type='Revenue' THEN balanceFirst ELSE 0 END) AS totalRevenue,
+
+                    -- Cost ko positive bana do (ABS)
+                    (SUM(CASE WHEN type='Cost' THEN balanceFirst ELSE 0 END)) AS totalCost,
+
+                    -- Net Profit = Revenue - Cost
+                    SUM(CASE WHEN type='Revenue' THEN balanceFirst ELSE 0 END) - 
+                    (SUM(CASE WHEN type='Cost' THEN balanceFirst ELSE 0 END)) AS netProfit
+             FROM trial_balance
+             GROUP BY year
+             ORDER BY year;`,
+            [],
             (_, res) => {
               for (let i = 0; i < res.rows.length; i++) {
                 const row = res.rows.item(i);
                 results.push({
-                  ...row,
-                  balances: JSON.parse(row.balances),
+                  year: row.year,
+                  totalRevenue: row.totalRevenue || 0,
+                  totalCost: row.totalCost || 0,
+                  netProfit: row.netProfit || 0,
                 });
               }
               resolve();
             },
             (_, error) => {
-              console.log("❌ Fetch error inside transaction:", error);
+              console.log("❌ Fetch overall PnL error:", error);
               reject(error);
               return false;
             }
           );
         },
         (txError) => {
-          console.log("❌ Transaction error:", txError);
+          console.log("❌ Transaction error overall PnL:", txError);
           reject(txError);
         }
       );
@@ -164,160 +257,84 @@ export const getTrialBalanceByCompany = async (companyName: string): Promise<any
 
     return results;
   } catch (err) {
-    console.log("❌ Fetch exception:", err);
+    console.log("❌ Exception overall PnL:", err);
     return [];
   }
 };
 
+export const getCompanyPnL = async (): Promise<PnLRow[]> => {
+  try {
+    const db = await getDB();
+    const results: PnLRow[] = [];
 
+    await new Promise<void>((resolve, reject) => {
+      db.transaction(
+        (tx) => {
+          tx.executeSql(
+            `SELECT company,
+                    year,
+                    SUM(CASE WHEN type='Revenue' THEN balanceFirst ELSE 0 END) AS totalRevenue,
+                    SUM(CASE WHEN type='Cost' THEN balanceFirst ELSE 0 END) AS totalCost,
+                    SUM(CASE WHEN type='Revenue' THEN balanceFirst ELSE 0 END) + 
+                    SUM(CASE WHEN type='Cost' THEN balanceFirst ELSE 0 END) AS netProfit
+             FROM trial_balance
+             GROUP BY company, year
+             ORDER BY company, year;`,
+            [],
+            (_, res) => {
+              const companyTotalsMap: Record<string, { totalRevenue: number; totalCost: number; netProfit: number; }> = {};
 
+              for (let i = 0; i < res.rows.length; i++) {
+                const row = res.rows.item(i);
 
+                // Year-wise row
+                results.push({
+                  company: row.company,
+                  year: row.year,
+                  totalRevenue: row.totalRevenue || 0,
+                  totalCost: row.totalCost || 0,
+                  netProfit: row.netProfit || 0,
+                });
 
+                // Accumulate overall totals per company
+                if (!companyTotalsMap[row.company]) {
+                  companyTotalsMap[row.company] = { totalRevenue: 0, totalCost: 0, netProfit: 0 };
+                }
+                companyTotalsMap[row.company].totalRevenue += row.totalRevenue || 0;
+                companyTotalsMap[row.company].totalCost += row.totalCost || 0;
+                companyTotalsMap[row.company].netProfit += row.netProfit || 0;
+              }
 
+              // Add overall totals row for each company
+              Object.keys(companyTotalsMap).forEach((company) => {
+                results.push({
+                  company,
+                  year: 'Overall', // indicate cumulative total
+                  totalRevenue: companyTotalsMap[company].totalRevenue,
+                  totalCost: companyTotalsMap[company].totalCost,
+                  netProfit: companyTotalsMap[company].netProfit,
+                });
+              });
 
+              resolve();
+            },
+            (_, error) => {
+              console.log("❌ Fetch company PnL error:", error);
+              reject(error);
+              return false;
+            }
+          );
+        },
+        (txError) => {
+          console.log("❌ Transaction error company PnL:", txError);
+          reject(txError);
+        }
+      );
+    });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// // /src/database/trialBalanceQueries.ts
-// import { getDB } from './db';
-
-// // Create table
-// export const createTrialBalanceTable = async () => {
-//   try {
-//     const db = await getDB();
-//     await db.transaction(async (tx) => {
-//       await tx.executeSql(
-//         `CREATE TABLE IF NOT EXISTS trial_balance (
-//           id INTEGER PRIMARY KEY AUTOINCREMENT,
-//           company TEXT,
-//           type TEXT,
-//           component TEXT,
-//           month INTEGER,
-//           year INTEGER,
-//           accountno TEXT,
-//           accountnoname TEXT,
-//           auxcode TEXT,
-//           cc2 TEXT,
-//           cc2code TEXT,
-//           cc3 TEXT,
-//           cc3code TEXT,
-//           balances TEXT
-//         );`
-//       );
-//     });
-//     console.log('✅ Trial Balance table created');
-//   } catch (err) {
-//     console.log('❌ Table creation error:', err);
-//   }
-// };
-
-// // Insert single record
-// export const insertTrialBalance = async (data: any) => {
-//   try {
-//     const db = await getDB();
-//     await db.transaction(async (tx) => {
-//       await tx.executeSql(
-//         `INSERT INTO trial_balance 
-//         (company, type, component, month, year, accountno, accountnoname, auxcode, cc2, cc2code, cc3, cc3code, balances)
-//         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-//         [
-//           data.company,
-//           data.type,
-//           data.component,
-//           data.month,
-//           data.year,
-//           data.accountno,
-//           data.accountnoname,
-//           data.auxcode,
-//           data.cc2,
-//           data.cc2code,
-//           data.cc3,
-//           data.cc3code,
-//           JSON.stringify(data.balances),
-//         ]
-//       );
-//     });
-//     console.log('✅ Trial Balance inserted');
-//   } catch (err) {
-//     console.log('❌ Insert error:', err);
-//   }
-// };
-
-// // Fetch all records
-// export const getAllTrialBalances = async (): Promise<any[]> => {
-//   try {
-//     const db = await getDB();
-//     const results: any[] = [];
-//     await db.transaction(async (tx) => {
-//       const [res] = await tx.executeSql('SELECT * FROM trial_balance');
-//       for (let i = 0; i < res.rows.length; i++) {
-//         const row = res.rows.item(i);
-//         results.push({
-//           ...row,
-//           balances: JSON.parse(row.balances),
-//         });
-//       }
-//     });
-//     return results;
-//   } catch (err) {
-//     console.log('❌ Fetch error:', err);
-//     return [];
-//   }
-// };
-
-// // Bulk insert multiple records
-
-// // export const insertMultipleTrialBalances = async (records: any[]) => {
-// //   for (let data of records) {
-// //     await insertTrialBalance(data);
-// //   }
-// //   console.log(`✅ ${records.length} records inserted`);
-// // };
-
-
-// export const insertMultipleTrialBalances = async (records: any[]) => {
-//   try {
-//     const db = await getDB();
-//     await db.transaction(async (tx) => {
-//       for (let data of records) {
-//         await tx.executeSql(
-//           `INSERT INTO trial_balance 
-//           (company, type, component, month, year, accountno, accountnoname, auxcode, cc2, cc2code, cc3, cc3code, balances)
-//           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-//           [
-//             data.company,
-//             data.type,
-//             data.component,
-//             data.month,
-//             data.year,
-//             data.accountno,
-//             data.accountnoname,
-//             data.auxcode,
-//             data.cc2,
-//             data.cc2code,
-//             data.cc3,
-//             data.cc3code,
-//             JSON.stringify(data.balances),
-//           ]
-//         );
-//       }
-//     });
-//     console.log(`✅ ${records.length} records inserted`);
-//   } catch (err) {
-//     console.log('❌ Bulk insert error:', err);
-//   }
-// };
+    return results;
+  } catch (err) {
+    console.log("❌ Exception company PnL:", err);
+    return [];
+  }
+};

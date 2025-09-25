@@ -72,7 +72,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false} >
       <StatusBar hidden={false} barStyle={'dark-content'} />
       <View style={styles.Header}>
         <TouchableOpacity style={styles.refreshBtn} onPress={() => loadData(true)}>

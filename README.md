@@ -1,3 +1,28 @@
+## Step 1: we get the data from System By using Api's 
+
+Note: Information we get are all under the one Company so we spilt the data into Different Companies by Companies Wise by using Account Number
+
+
+## Step 2: we are adding the data bcz data is missed in the System so we are mapping the data and then we saved the data into sqlite
+
+
+
+
+## Step 3: we are using the Sqlite for storing the Data 
+
+Note: sqlite for save the large amount of data locally bcz async storage can store only 4 5 mb data only
+
+
+
+
+## step 4: Now we have the data that we required
+
+
+
+
+
+<!-- 
+
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
@@ -94,4 +119,4 @@ To learn more about React Native, take a look at the following resources:
 - [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native. -->

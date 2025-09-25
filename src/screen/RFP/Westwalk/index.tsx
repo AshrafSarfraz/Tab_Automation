@@ -1,11 +1,11 @@
-// TrialBalance.tsx
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   ActivityIndicator,
   StyleSheet,
   Dimensions,
+  FlatList,
   ScrollView,
 } from "react-native";
 import { Colors } from "../../../themes/color";
@@ -18,26 +18,11 @@ import { insertMultipleTrialBalances } from "../../../database/trailBalanceQueri
 const { width } = Dimensions.get("window");
 const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-interface TableRow {
-  company: string;
-  type: string;
-  component: string;
-  month:number;
-  year: number;
-  accountno: string;
-  accountnoname:string;
-  auxcode:string;
-  cc2:string;
-  cc2code:string;
-  cc3:string;
-  cc3code: string | null;
-  balances: number[];
-}
-
 export default function TrialBalance() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totals, setTotals] = useState({ revenue: 0, cost: 0 });
 
   useEffect(() => {
     const loadData = async () => {
@@ -46,8 +31,36 @@ export default function TrialBalance() {
         if (!token) throw new Error("No token found");
 
         const apiData = await fetchTrialBalanceApi(token);
-        setData(apiData);
+
+        const mapped = (apiData ?? []).map((item) => {
+          const mapping = accountMapping[item.accountno] || {};
+          
+          return {
+            ...item,
+            company: mapping.company || "",
+            type: mapping.type || "",
+            component: mapping.component || "",
+            balanceFirst: -1 * Number(item.balanceFirst ?? 0),
+          };
+        });
+
+        setData(mapped);
+
+        // Calculate totals
+        const revenue = mapped
+          .filter((i) => i.type === "Revenue")
+          .reduce((sum, i) => sum + (i.balanceFirst || 0), 0);
+        const cost = mapped
+          .filter((i) => i.type === "Cost")
+          .reduce((sum, i) => sum + (i.balanceFirst || 0), 0);
+        setTotals({ revenue, cost });
+
+        
+        // Save only balanceFirst
+        await insertMultipleTrialBalances(mapped);
+
       } catch (err) {
+        console.log(err);
         setError("Failed to load trial balance");
       } finally {
         setLoading(false);
@@ -56,107 +69,44 @@ export default function TrialBalance() {
     loadData();
   }, []);
 
-  const groupedData = useMemo(() => {
-    const map = new Map<string, TableRow>();
-
-    data.forEach((item) => {
-      const mapping = accountMapping[item.accountno];
-      const company = mapping?.company || "";
-      const component = mapping?.component || "";
-      const type = mapping?.type || "";
-
-      const key = `${item.year}_${item.cc3code || ""}_${item.accountno}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          company,
-          type,
-          component,
-          month: item.month || 0,
-          year: item.year,
-          accountno: item.accountno,
-          accountnoname: item.accountnoname || "",
-          auxcode: item.auxcode || "",
-          cc2: item.cc2 || "",
-          cc2code: item.cc2code || "",
-          cc3: item.cc3 || "",
-          cc3code: item.cc3code || "",
-          balances: Array(12).fill(0),
-        });
-      }
-
-      const row = map.get(key)!;
-      if (item.month >= 1 && item.month <= 12) {
-        row.balances[item.month - 1] += item.balanceFirst || 0;
-      }
-    });
-
-    const allRows = Array.from(map.values()).sort(
-      (a, b) =>
-        a.year - b.year ||
-        a.company.localeCompare(b.company) ||
-        a.component.localeCompare(b.component)
-    );
-
-    const result: { [year: number]: TableRow[] } = {};
-    allRows.forEach((row) => {
-      if (!result[row.year]) result[row.year] = [];
-      result[row.year].push(row);
-    });
-
-    return result;
-  }, [data]);
-
-  // 🔹 Save groupedData to SQLite
-  useEffect(() => {
-    if (Object.keys(groupedData).length === 0) return;
-
-    const saveToSQLite = async () => {
-      try {
-        const allRows: TableRow[] = Object.values(groupedData).flat();
-        await insertMultipleTrialBalances(allRows);
-        console.log("✅ All grouped data inserted into SQLite");
-      } catch (err) {
-        console.log("❌ Failed to insert into SQLite:", err);
-      }
-    };
-
-    saveToSQLite();
-  }, [groupedData]);
-
   const renderHeader = () => (
     <View style={[styles.row, styles.header]}>
-      <Text style={[styles.cell, { width: 100 }]}>Income Statement</Text>
-      <Text style={[styles.cell, { width: 200 }]}>Company Name</Text>
-      <Text style={[styles.cell, { width: 200 }]}>Account Code</Text>
-      <Text style={[styles.cell, { width: 150 }]}>Component</Text>
-      <Text style={[styles.cell, { width: 150 }]}>Zone (CC3)</Text>
-      {months.map((m) => (
-        <Text key={m} style={[styles.cell, { width: 120, textAlign: "right" }]}>{m}</Text>
-      ))}
-      <Text style={[styles.cell, { width: 100, textAlign: "right" }]}>Total</Text>
+      <Text style={[styles.cell, { width: 200 }]}>Company</Text>
+      <Text style={[styles.cell, { width: 120 }]}>Type</Text>
+      <Text style={[styles.cell, { width: 150 }]}>Income Statement</Text>
+      <Text style={[styles.cell, { width: 140 }]}>CC2</Text>
+      <Text style={[styles.cell, { width: 140 }]}>CC2 Code</Text>
+      <Text style={[styles.cell, { width: 120 }]}>Account No</Text>
+      <Text style={[styles.cell, { width: 240 }]}>Account Name</Text>
+      <Text style={[styles.cell, { width: 140 }]}>Zone (CC3)</Text>
+      <Text style={[styles.cell, { width: 140 }]}>Auxcode</Text>
+      <Text style={[styles.cell, { width: 70, textAlign: "right" }]}>Month</Text>
+      <Text style={[styles.cell, { width: 80, textAlign: "right" }]}>Year</Text>
+      <Text style={[styles.cell, { width: 120, textAlign: "right" }]}>Balance</Text>
     </View>
   );
 
-  const renderRow = (item: TableRow) => {
-    const total = item.balances.reduce((sum, b) => sum + b, 0);
-    return (
-      <View style={styles.row} key={item.accountno + item.cc3code}>
-        <Text style={[styles.cell, { width: 100 }]}>{item.type}</Text>
-        <Text style={[styles.cell, { width: 200 }]}>{item.company}</Text>
-        <Text style={[styles.cell, { width: 200 }]}>{item.accountno}</Text>
-        <Text style={[styles.cell, { width: 150 }]}>{item.component}</Text>
-        <Text style={[styles.cell, { width: 150 }]}>{item.cc3code}</Text>
-        {item.balances.map((b, idx) => (
-          <Text key={idx} style={[styles.cell, { width: 120, textAlign: "right" }]}>
-            {b.toFixed(2)}
-          </Text>
-        ))}
-        <Text style={[styles.cell, { width: 100, textAlign: "right" }]}>
-          {total.toFixed(2)}
-        </Text>
-      </View>
-    );
-  };
+  const renderRow = ({ item, index }: { item: any; index: number }) => (
+    <View
+      style={styles.row}
+      key={`${item.accountno}-${item.cc3code ?? ""}-${item.year}-${item.month}-${index}`}
+    >
+      <Text style={[styles.cell, { width: 200 }]}>{item.company}</Text>
+      <Text style={[styles.cell, { width: 120 }]}>{item.type}</Text>
+      <Text style={[styles.cell, { width: 150 }]}>{item.component}</Text>
+      <Text style={[styles.cell, { width: 150 }]}>{item.cc2}</Text>
+      <Text style={[styles.cell, { width: 150 }]}>{item.cc2code}</Text>
+      <Text style={[styles.cell, { width: 120 }]}>{item.accountno}</Text>
+      <Text style={[styles.cell, { width: 240 }]}>{item.accountnoname || ""}</Text>
+      <Text style={[styles.cell, { width: 140 }]}>{item.cc3code || ""}</Text>
+      <Text style={[styles.cell, { width: 140 }]}>{item.auxcode}</Text>
+      <Text style={[styles.cell, { width: 70, textAlign: "right" }]}>
+        {item.month ? months[(item.month ?? 1) - 1] ?? item.month : ""}
+      </Text>
+      <Text style={[styles.cell, { width: 80, textAlign: "right" }]}>{item.year}</Text>
+      <Text style={[styles.cell, { width: 120, textAlign: "right" }]}>{(item.balanceFirst || 0).toFixed(2)}</Text>
+    </View>
+  );
 
   if (loading)
     return (
@@ -174,22 +124,33 @@ export default function TrialBalance() {
 
   return (
     <View style={styles.Container}>
-      <CustomHeader title="Company Details" />
-      <ScrollView>
-        <ScrollView horizontal>
-          <View>
-            {Object.keys(groupedData).map((year) => (
-              <View key={year}>
-                <View style={[styles.row, { backgroundColor: "#eee", borderBottomWidth: 2 }]}>
-                  <Text style={[styles.cell, { fontWeight: "bold", fontSize: 16 }]}>{year}</Text>
-                </View>
-                {renderHeader()}
-                {groupedData[parseInt(year)].map((row) => renderRow(row))}
-              </View>
-            ))}
-          </View>
-        </ScrollView>
+      <CustomHeader title="Trial Balance" />
+      <ScrollView horizontal>
+        <FlatList
+          data={data}
+          keyExtractor={(item, index) =>
+            `${item.accountno}-${item.cc3code ?? ""}-${item.year}-${item.month}-${index}`
+          }
+          ListHeaderComponent={renderHeader}
+          renderItem={renderRow}
+          initialNumToRender={50}
+          maxToRenderPerBatch={50}
+          windowSize={21}
+        />
       </ScrollView>
+
+      {/* Small summary report */}
+      {/* <View style={styles.summary}>
+        <Text style={styles.summaryText}>
+          Total Revenue: {totals.revenue.toFixed(2)} QAR
+        </Text>
+        <Text style={styles.summaryText}>
+          Total Cost: {totals.cost.toFixed(2)} QAR
+        </Text>
+        <Text style={styles.summaryText}>
+          Net Profit: {(totals.revenue + totals.cost).toFixed(2)} QAR
+        </Text>
+      </View> */}
     </View>
   );
 }
@@ -215,56 +176,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 40,
   },
+  summary: {
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: "#f0f4f7",
+    borderRadius: 12,
+  },
+  summaryText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.Black,
+    marginBottom: 4,
+  },
 });
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-// // TrialBalance.tsx
-// import React, { useEffect, useState, useMemo } from "react";
-// import {
-//   View,
-//   Text,
-//   ActivityIndicator,
-//   StyleSheet,
-//   Dimensions,
-//   ScrollView,
-// } from "react-native";
-// import { Colors } from "../../../themes/color";
-// import CustomHeader from "../../../component/customHeader";
-// import { accountMapping } from "../../../redux/accountMaping/accountMapping"; 
-// import { fetchTrialBalanceApi, getAuthToken } from "../../../Api's"; 
-
-// const { width } = Dimensions.get("window");
-// const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
-// interface TableRow {
-//   company: string;
-//   type: string;
-//   component: string;
-//   month:number;
-//   year: number;
-//   accountno: string;
-//   accountnoname:string;
-//   auxcode:string;
-//   cc2:string;
-//   cc2code:string;
-//   cc3:string;
-//   cc3code: string | null;
-//   balances: number[];
-// }
 
 // export default function TrialBalance() {
 //   const [data, setData] = useState<any[]>([]);
@@ -278,8 +205,26 @@ const styles = StyleSheet.create({
 //         if (!token) throw new Error("No token found");
 
 //         const apiData = await fetchTrialBalanceApi(token);
-//         setData(apiData);
+
+//         const mapped = (apiData ?? []).map((item) => {
+//           const mapping = accountMapping[item.accountno] || {};
+       
+          
+//           return {
+//             ...item,
+//             company: mapping.company || "",
+//             type: mapping.type || "",
+//             component: mapping.component || "",
+//           };
+//         });
+
+//         setData(mapped);
+
+//         // Save only balanceFirst
+//         await insertMultipleTrialBalances(mapped);
+
 //       } catch (err) {
+//         console.log(err);
 //         setError("Failed to load trial balance");
 //       } finally {
 //         setLoading(false);
@@ -288,90 +233,44 @@ const styles = StyleSheet.create({
 //     loadData();
 //   }, []);
 
-//   const groupedData = useMemo(() => {
-//     const map = new Map<string, TableRow>();
-
-//     data.forEach((item) => {
-//       const mapping = accountMapping[item.accountno];
-//       const company = mapping?.company || "";
-//       const component = mapping?.component || "";
-//       const type = mapping?.type || "";
-
-//       const key = `${item.year}_${item.cc3code || ""}_${item.accountno}`;
-//       if (!map.has(key)) {
-//         map.set(key, {
-//           company,
-//           type,
-//           component,
-//           month: item.month || 0,
-//           year: item.year,
-//           accountno: item.accountno,
-//           accountnoname: item.accountnoname || "",
-//           auxcode: item.auxcode || "",
-//           cc2: item.cc2 || "",
-//           cc2code: item.cc2code || "",
-//           cc3: item.cc3 || "",
-//           cc3code: item.cc3code || "",
-//           balances: Array(12).fill(0),
-//         });
-//       }
-
-//       const row = map.get(key)!;
-//       if (item.month >= 1 && item.month <= 12) {
-//         row.balances[item.month - 1] += item.balanceFirst || 0;
-//       }
-//     });
-
-//     const allRows = Array.from(map.values()).sort(
-//       (a, b) =>
-//         a.year - b.year ||
-//         a.company.localeCompare(b.company) ||
-//         a.component.localeCompare(b.component)
-//     );
-
-//     const result: { [year: number]: TableRow[] } = {};
-//     allRows.forEach((row) => {
-//       if (!result[row.year]) result[row.year] = [];
-//       result[row.year].push(row);
-//     });
-
-//     return result;
-//   }, [data]);
-
 //   const renderHeader = () => (
 //     <View style={[styles.row, styles.header]}>
-//       <Text style={[styles.cell, { width: 100 }]}>Income Statement</Text>
-//       <Text style={[styles.cell, { width: 200 }]}>Company Name</Text>
-//       <Text style={[styles.cell, { width: 200 }]}>Account Code</Text>
-//       <Text style={[styles.cell, { width: 150 }]}>Component</Text>
-//       <Text style={[styles.cell, { width: 150 }]}>Zone (CC3)</Text>
-//       {months.map((m) => (
-//         <Text key={m} style={[styles.cell, { width: 120, textAlign: "right" }]}>{m}</Text>
-//       ))}
-//       <Text style={[styles.cell, { width: 100, textAlign: "right" }]}>Total</Text>
+//       <Text style={[styles.cell, { width: 200 }]}>Company</Text>
+//       <Text style={[styles.cell, { width: 120 }]}>Type</Text>
+//       <Text style={[styles.cell, { width: 150 }]}>Income Statement</Text>
+//       <Text style={[styles.cell, { width: 140 }]}>CC2</Text>
+//       <Text style={[styles.cell, { width: 140 }]}>CC2 Code</Text>
+//       <Text style={[styles.cell, { width: 120 }]}>Account No</Text>
+//       <Text style={[styles.cell, { width: 240 }]}>Account Name</Text>
+//       <Text style={[styles.cell, { width: 140 }]}>Zone (CC3)</Text>
+//       <Text style={[styles.cell, { width: 140 }]}>Auxcode</Text>
+//       <Text style={[styles.cell, { width: 70, textAlign: "right" }]}>Month</Text>
+//       <Text style={[styles.cell, { width: 80, textAlign: "right" }]}>Year</Text>
+//       <Text style={[styles.cell, { width: 120, textAlign: "right" }]}>Balance</Text>
 //     </View>
 //   );
 
-//   const renderRow = (item: TableRow) => {
-//     const total = item.balances.reduce((sum, b) => sum + b, 0);
-//     return (
-//       <View style={styles.row} key={item.accountno + item.cc3code}>
-//         <Text style={[styles.cell, { width: 100 }]}>{item.type}</Text>
-//         <Text style={[styles.cell, { width: 200 }]}>{item.company}</Text>
-//         <Text style={[styles.cell, { width: 200 }]}>{item.accountno}</Text>
-//         <Text style={[styles.cell, { width: 150 }]}>{item.component}</Text>
-//         <Text style={[styles.cell, { width: 150 }]}>{item.cc3code}</Text>
-//         {item.balances.map((b, idx) => (
-//           <Text key={idx} style={[styles.cell, { width: 120, textAlign: "right" }]}>
-//             {b.toFixed(2)}
-//           </Text>
-//         ))}
-//         <Text style={[styles.cell, { width: 100, textAlign: "right" }]}>
-//           {total.toFixed(2)}
-//         </Text>
-//       </View>
-//     );
-//   };
+//   const renderRow = ({ item, index }: { item: any; index: number }) => (
+//     <View
+//       style={styles.row}
+//       key={`${item.accountno}-${item.cc3code ?? ""}-${item.year}-${item.month}-${index}`}
+//     >
+//       <Text style={[styles.cell, { width: 200 }]}>{item.company}</Text>
+//       <Text style={[styles.cell, { width: 120 }]}>{item.type}</Text>
+//       <Text style={[styles.cell, { width: 150 }]}>{item.component}</Text>
+//       <Text style={[styles.cell, { width: 150 }]}>{item.cc2}</Text>
+//       <Text style={[styles.cell, { width: 150 }]}>{item.cc2code}</Text>
+//       <Text style={[styles.cell, { width: 120 }]}>{item.accountno}</Text>
+//       <Text style={[styles.cell, { width: 240 }]}>{item.accountnoname || ""}</Text>
+//       <Text style={[styles.cell, { width: 140 }]}>{item.cc3code || ""}</Text>
+//       <Text style={[styles.cell, { width: 140 }]}>{item.auxcode}</Text>
+//       <Text style={[styles.cell, { width: 70, textAlign: "right" }]}>
+//         {item.month ? months[(item.month ?? 1) - 1] ?? item.month : ""}
+//       </Text>
+//       <Text style={[styles.cell, { width: 80, textAlign: "right" }]}>{item.year}</Text>
+//       <Text style={[styles.cell, { width: 120, textAlign: "right" }]}>{(item.balanceFirst || 0).toFixed(2)}</Text>
+//     </View>
+//   );
 
 //   if (loading)
 //     return (
@@ -389,21 +288,19 @@ const styles = StyleSheet.create({
 
 //   return (
 //     <View style={styles.Container}>
-//       <CustomHeader title="Company Details" />
-//       <ScrollView>
-//         <ScrollView horizontal>
-//           <View>
-//             {Object.keys(groupedData).map((year) => (
-//               <View key={year}>
-//                 <View style={[styles.row, { backgroundColor: "#eee", borderBottomWidth: 2 }]}>
-//                   <Text style={[styles.cell, { fontWeight: "bold", fontSize: 16 }]}>{year}</Text>
-//                 </View>
-//                 {renderHeader()}
-//                 {groupedData[parseInt(year)].map((row) => renderRow(row))}
-//               </View>
-//             ))}
-//           </View>
-//         </ScrollView>
+//       <CustomHeader title="Trial Balance" />
+//       <ScrollView horizontal>
+//         <FlatList
+//           data={data}
+//           keyExtractor={(item, index) =>
+//             `${item.accountno}-${item.cc3code ?? ""}-${item.year}-${item.month}-${index}`
+//           }
+//           ListHeaderComponent={renderHeader}
+//           renderItem={renderRow}
+//           initialNumToRender={50}
+//           maxToRenderPerBatch={50}
+//           windowSize={21}
+//         />
 //       </ScrollView>
 //     </View>
 //   );
@@ -431,6 +328,3 @@ const styles = StyleSheet.create({
 //     paddingTop: 40,
 //   },
 // });
-
-
-
