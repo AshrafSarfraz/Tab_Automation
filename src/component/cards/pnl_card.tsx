@@ -31,19 +31,19 @@ const PnlCardModern = ({ navigation }) => {
   const metrics = [
     {
       label: 'Net Profit',
-      value: `${overall.netProfit.toFixed(2)} QAR`,
+      value: `${overall.netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })} QAR`,
       color: Colors.Green,
       type: null,
     },
     {
       label: 'Total Revenue',
-      value: `${overall.totalRevenue.toFixed(2)} QAR`,
+      value: `${overall.totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })} QAR`,
       color: Colors.Green,
       type: 'Revenue',
     },
     {
       label: 'Total Expense',
-      value: `${overall.totalCost.toFixed(2)} QAR`,
+      value: `${overall.totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })} QAR`,
       color: 'red',
       type: 'Cost',
     },
@@ -63,10 +63,10 @@ const PnlCardModern = ({ navigation }) => {
   const renderRow = ({ item }: { item: PnLRow }) => (
     <View style={styles.tableRow}>
       <Text style={[styles.cell, styles.year]}>{item.year}</Text>
-      <Text style={styles.cell}>{item.totalRevenue.toLocaleString('en-US')}</Text>
-      <Text style={styles.cell}>{item.totalCost.toLocaleString('en-US')}</Text>
+      <Text style={styles.cell}>{item.totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+      <Text style={styles.cell}>{item.totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
       <Text style={styles.cell}>
-        {(item.totalRevenue + item.totalCost).toLocaleString('en-US')}
+        {(item.totalRevenue + item.totalCost).toLocaleString('en-US', { maximumFractionDigits: 0 })}
       </Text>
     </View>
   );

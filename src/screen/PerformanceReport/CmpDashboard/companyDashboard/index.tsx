@@ -43,11 +43,11 @@ export default function CmpDashboard({navigation, route}) {
   const renderItem = ({item}: {item: PnLRow}) => (
     <View style={styles.row}>
       <Text style={styles.cell}>{item.year}</Text>
-      <Text style={styles.cell}>{item.totalRevenue.toLocaleString()}</Text>
-      <Text style={styles.cell}>{item.totalCost.toLocaleString()}</Text>
+      <Text style={styles.cell}>{item.totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+      <Text style={styles.cell}>{item.totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
       <Text
         style={[styles.cell, {color: item.netProfit >= 0 ? 'green' : 'red'}]}>
-        {item.netProfit.toLocaleString()}
+        {item.netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
       </Text>
     </View>
   );

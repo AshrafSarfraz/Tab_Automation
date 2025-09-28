@@ -41,12 +41,20 @@ export default function SelectedCompany() {
       try {
         const allRows = await getAllTrialBalances();
   
-        // Filter rows by company + type
-        let filteredRows = allRows.filter(row => {
+         // Filter rows by company + type
+         let filteredRows = allRows.filter(row => {
           let matches = true;
           if (company) matches = matches && row.company === company;
           if (type) matches = matches && row.type === type;
           return matches;
+        });
+  
+        // --- Revenue adjustment first ---
+        filteredRows = filteredRows.map(r => {
+          if (r.type === "Revenue" && r.accountno === "41112" && r.cc2 === "Residential Rental") {
+            return { ...r, component: "Residential", accountno: "41111" };
+          }
+          return r;
         });
   
         // Sort: Year DESC → Accountno → CC3
@@ -67,14 +75,35 @@ export default function SelectedCompany() {
           structured.push({ yearHeader: true, company, year } as RowItem);
   
           // --- Revenue ---
-          const revenueRows = yearRows.filter(r => r.type === "Revenue");
-          structured.push(...revenueRows);
+          let revenueRows = yearRows.filter(r => r.type === "Revenue");
   
-          if (revenueRows.length > 0) {
+          // Group Revenue by accountno + cc3code
+          const revenueByKey: Record<string, RowItem> = {};
+          revenueRows.forEach(r => {
+            const key = (r.accountno || '') + '||' + (r.cc3code || '');
+            if (!revenueByKey[key]) {
+              const balances = Array(12).fill(0);
+              if (r.month >= 1 && r.month <= 12) balances[r.month - 1] = r.balanceFirst || 0;
+              revenueByKey[key] = {
+                ...r,
+                totalBalances: balances,
+                totalSum: (r.balanceFirst || 0),
+              };
+            } else {
+              if (r.month >= 1 && r.month <= 12) {
+                revenueByKey[key].totalBalances![r.month - 1] += r.balanceFirst || 0;
+              }
+              revenueByKey[key].totalSum = revenueByKey[key].totalBalances!.reduce((a, b) => a + b, 0);
+            }
+          });
+  
+          const groupedRevenue = Object.values(revenueByKey);
+          structured.push(...groupedRevenue);
+  
+          // Revenue total row
+          if (groupedRevenue.length > 0) {
             const revBalances = Array(12).fill(0);
-            revenueRows.forEach(r => {
-              if (r.month >= 1 && r.month <= 12) revBalances[r.month - 1] += r.balanceFirst || 0;
-            });
+            groupedRevenue.forEach(r => r.totalBalances?.forEach((b, i) => { revBalances[i] += b; }));
             structured.push({
               isTotalRow: true,
               totalType: "Revenue",
@@ -83,7 +112,10 @@ export default function SelectedCompany() {
               totalSum: revBalances.reduce((a, b) => a + b, 0),
             } as RowItem);
           }
-  
+
+
+
+
           // --- Cost: group by accountno + auxcode ---
           const costRows = yearRows.filter(r => r.type === "Cost");
           let groupedCost: RowItem[] = [];
@@ -186,16 +218,15 @@ export default function SelectedCompany() {
 
   const renderHeader = () => (
     <View style={[styles.row, styles.header]}>
-      <Text style={[styles.cell, {width: 100}]}>Type</Text>
-      <Text style={[styles.cell, {width: 200}]}>Component</Text>
-      <Text style={[styles.cell, {width: 200}]}>Account</Text>
-      <Text style={[styles.cell, {width: 150}]}>CC2</Text>
-      <Text style={[styles.cell, {width: 150}]}>CC3</Text>
-      <Text style={[styles.cell, {width: 150}]}>AuxCode</Text>
+      <Text style={[styles.cell, {width: 90}]}>Type</Text>
+      <Text style={[styles.cell, {width: 180}]}>Component</Text>
+      <Text style={[styles.cell, {width: 100}]}>Account</Text>
+      <Text style={[styles.cell, {width: 100}]}>CC3/AuxCode</Text>
+      <Text style={[styles.cell, {width: 100, textAlign: 'right'}]}>Total</Text>
       {months.map(m => (
         <Text key={m} style={[styles.cell, {width: 120, textAlign: 'right'}]}>{m}</Text>
       ))}
-      <Text style={[styles.cell, {width: 100, textAlign: 'right'}]}>Total</Text>
+     
     </View>
   );
 
@@ -220,15 +251,15 @@ export default function SelectedCompany() {
 
       return (
         <View style={[styles.row, {backgroundColor: bgColor, borderTopWidth: 2, borderColor: '#aaa'}]}>
-          <Text style={[styles.cell, {width: 100, fontWeight: 'bold'}]}>{label}</Text>
-          <Text style={[styles.cell, {width: 200}]}>{item.company}</Text>
-          <Text style={[styles.cell, {width: 200}]}></Text>
-          <Text style={[styles.cell, {width: 150}]}></Text>
-          <Text style={[styles.cell, {width: 150}]}></Text>
+          <Text style={[styles.cell, {width: 90, fontWeight: 'bold'}]}>{label}</Text>
+          <Text style={[styles.cell, {width: 180}]}>{item.company}</Text>
+          <Text style={[styles.cell, {width: 100}]}></Text>
+          <Text style={[styles.cell, {width: 100}]}></Text>
+          <Text style={[styles.cell, {width: 100, textAlign: 'right', fontWeight: 'bold'}]}>{item.totalSum?.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
           {item.totalBalances?.map((b, idx) => (
-            <Text key={idx} style={[styles.cell, {width: 120, textAlign: 'right', fontWeight: 'bold'}]}>{b.toFixed(2)}</Text>
+            <Text key={idx} style={[styles.cell, {width: 120, textAlign: 'right', fontWeight: 'bold'}]}>{b.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
           ))}
-          <Text style={[styles.cell, {width: 100, textAlign: 'right', fontWeight: 'bold'}]}>{item.totalSum?.toFixed(2)}</Text>
+        
         </View>
       );
     }
@@ -241,16 +272,15 @@ export default function SelectedCompany() {
 
     return (
       <View style={styles.row}>
-        <Text style={[styles.cell, {width: 100}]}>{item.type}</Text>
-        <Text style={[styles.cell, {width: 200}]}>{item.component}</Text>
-        <Text style={[styles.cell, {width: 200}]}>{item.accountno}</Text>
-        <Text style={[styles.cell, {width: 150}]}>{item.cc2}</Text>
-        <Text style={[styles.cell, {width: 150}]}>{item.cc3code}</Text>
-        <Text style={[styles.cell, {width: 150}]}>{item.auxcode}</Text>
+        <Text style={[styles.cell, {width: 90}]}>{item.type}</Text>
+        <Text style={[styles.cell, {width: 180}]}>{item.component}</Text>
+        <Text style={[styles.cell, {width: 100}]}>{item.accountno}</Text>
+        <Text style={[styles.cell, {width: 100}]}>    {item.type === 'Revenue' ? item.cc3code : item.auxcode}</Text>
+        <Text style={[styles.cell, {width: 100, textAlign: 'right'}]}>{total.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
         {balances.map((b, idx) => (
-          <Text key={idx} style={[styles.cell, {width: 120, textAlign: 'right'}]}>{b.toFixed(2)}</Text>
+          <Text key={idx} style={[styles.cell, {width: 120, textAlign: 'right'}]}>{b.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
         ))}
-        <Text style={[styles.cell, {width: 100, textAlign: 'right'}]}>{total.toFixed(2)}</Text>
+      
       </View>
     );
   };
@@ -299,7 +329,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   header: {backgroundColor: Colors.Bg, borderBottomWidth: 2},
-  cell: {paddingHorizontal: 8, fontSize: width > 600 ? 16 : 12},
+  cell: {paddingHorizontal: 8, fontSize: width > 600 ? 12: 12},
   yearHeader: {
     backgroundColor: '#eee',
     borderBottomWidth: 1,

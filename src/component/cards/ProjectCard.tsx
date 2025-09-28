@@ -61,11 +61,11 @@ export default function Companies({navigation}) {
               <Text style={styles.companyName}>{item.company}</Text>
               <View style={styles.rowData}>
                 <Text style={styles.label}>Revenue:</Text>
-                <Text style={styles.value}>{item.totalRevenue.toLocaleString()}</Text>
+                <Text style={styles.value}>{item.totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
               </View>
               <View style={styles.rowData}>
                 <Text style={styles.label}>Cost:</Text>
-                <Text style={styles.value}>{item.totalCost.toLocaleString()}</Text>
+                <Text style={styles.value}>{item.totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
               </View>
               <View style={styles.rowData}>
                 <Text style={styles.label}>Net Profit:</Text>
@@ -75,7 +75,7 @@ export default function Companies({navigation}) {
                     { color: item.netProfit >= 0 ? 'green' : 'red' },
                   ]}
                 >
-                  {item.netProfit.toLocaleString()}
+                  {item.netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                 </Text>
               </View>
             </TouchableOpacity>
