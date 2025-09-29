@@ -338,3 +338,56 @@ export const getCompanyPnL = async (): Promise<PnLRow[]> => {
     return [];
   }
 };
+
+
+export const ManPowerSalaries = async (): Promise<PnLRow[]> => {
+  try {
+    const db = await getDB();
+    const results: PnLRow[] = [];
+
+    await new Promise<void>((resolve, reject) => {
+      db.transaction(
+        (tx) => {
+          tx.executeSql(
+            `SELECT company,
+                    year,
+                    SUM(balanceFirst) AS totalCost
+             FROM trial_balance
+             WHERE company = 'Man Power / Salaries' AND type='Cost'
+             GROUP BY company, year
+             ORDER BY year;`,
+            [],
+            (_, res) => {
+              for (let i = 0; i < res.rows.length; i++) {
+                const row = res.rows.item(i);
+                results.push({
+                  company: row.company,
+                  year: row.year,
+                  totalRevenue: 0,         // not needed
+                  totalCost: row.totalCost || 0,
+                  netProfit: 0,            // not needed
+                });
+              }
+              resolve();
+            },
+            (_, error) => {
+              console.log("❌ Fetch Man Power / Salaries cost error:", error);
+              reject(error);
+              return false;
+            }
+          );
+        },
+        (txError) => {
+          console.log("❌ Transaction error Man Power / Salaries cost:", txError);
+          reject(txError);
+        }
+      );
+    });
+
+    return results;
+  } catch (err) {
+    console.log("❌ Exception Man Power / Salaries cost:", err);
+    return [];
+  }
+};
+

@@ -8,7 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { getCompanyPnL } from '../../database/trailBalanceQueries';
+import { getCompanyPnL, ManPowerSalaries } from '../../database/trailBalanceQueries';
 
 const { width } = Dimensions.get('window');
 
@@ -20,25 +20,49 @@ interface PnLRow {
   netProfit: number;
 }
 
-export default function Companies({navigation}) {
+export default function Companies({ navigation }) {
   const [overallData, setOverallData] = useState<PnLRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPnL = async () => {
+    const fetchAdjustedPnL = async () => {
       setLoading(true);
-      const results = await getCompanyPnL();
 
-      // ✅ Sirf Overall aur "Westwalk Group" ko exclude kar diya
-      const filtered = results.filter(
-        item => item.year === 'Overall' && item.company !== 'Man Power / Salaries');
-       
-        const sorted = filtered.sort((a, b) => b.netProfit - a.netProfit);
+      const allCompanies = await getCompanyPnL();
+      const manPowerRows = await ManPowerSalaries();
+      const manPowerTotalCost = manPowerRows.reduce((sum, row) => sum + row.totalCost, 0);
+
+      // Filter only overall rows excluding Man Power / Salaries
+      const filtered = allCompanies.filter(
+        item => item.year === 'Overall' && item.company !== 'Man Power / Salaries'
+      );
+
+      // Split Man Power cost across companies
+      const splitPercentages: Record<string, number> = {
+        'West Walk Real Estate': 0.22,
+        'Assets Services Company': 0.6851,
+        'West Walk Advertisement': 0.0949,
+      };
+
+      const adjusted = filtered.map(item => {
+        const additionalCost = splitPercentages[item.company] ? manPowerTotalCost * splitPercentages[item.company] : 0;
+        const newCost = item.totalCost + additionalCost;
+        const newNetProfit = item.totalRevenue + newCost;
+        return {
+          ...item,
+          totalCost: newCost,
+          netProfit: newNetProfit,
+        };
+      });
+
+      // Sort by netProfit descending
+      const sorted = adjusted.sort((a, b) => b.netProfit - a.netProfit);
 
       setOverallData(sorted);
       setLoading(false);
     };
-    fetchPnL();
+
+    fetchAdjustedPnL();
   }, []);
 
   if (loading) {
@@ -57,7 +81,11 @@ export default function Companies({navigation}) {
           const backgroundColor = cardColors[index % cardColors.length];
 
           return (
-            <TouchableOpacity key={index} style={[styles.card, { backgroundColor }]} onPress={()=>{navigation.navigate('CmpDashboard',{company:item.company})}} >
+            <TouchableOpacity
+              key={index}
+              style={[styles.card, { backgroundColor }]}
+              onPress={() => navigation.navigate('CmpDashboard', { company: item.company })}
+            >
               <Text style={styles.companyName}>{item.company}</Text>
               <View style={styles.rowData}>
                 <Text style={styles.label}>Revenue:</Text>
@@ -69,12 +97,7 @@ export default function Companies({navigation}) {
               </View>
               <View style={styles.rowData}>
                 <Text style={styles.label}>Net Profit:</Text>
-                <Text
-                  style={[
-                    styles.value,
-                    { color: item.netProfit >= 0 ? 'green' : 'red' },
-                  ]}
-                >
+                <Text style={[styles.value, { color: item.netProfit >= 0 ? 'green' : 'red' }]}>
                   {item.netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                 </Text>
               </View>
@@ -87,9 +110,7 @@ export default function Companies({navigation}) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -130,3 +151,140 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+
+
+
+// import React, { useEffect, useState } from 'react';
+// import {
+//   View,
+//   Text,
+//   StyleSheet,
+//   ActivityIndicator,
+//   Dimensions,
+//   ScrollView,
+//   TouchableOpacity,
+// } from 'react-native';
+// import { getCompanyPnL, ManPowerSalaries } from '../../database/trailBalanceQueries';
+
+// const { width } = Dimensions.get('window');
+
+// interface PnLRow {
+//   company: string;
+//   year: number | string;
+//   totalRevenue: number;
+//   totalCost: number;
+//   netProfit: number;
+// }
+
+// export default function Companies({navigation}) {
+//   const [overallData, setOverallData] = useState<PnLRow[]>([]);
+//   const [loading, setLoading] = useState(true);
+
+//   useEffect(() => {
+//     const fetchPnL = async () => {
+//       setLoading(true);
+//       const results = await getCompanyPnL();
+
+//       // ✅ Sirf Overall aur "Westwalk Group" ko exclude kar diya
+//       const filtered = results.filter(
+//         item => item.year === 'Overall' && item.company !== 'Man Power / Salaries');
+//         const sorted = filtered.sort((a, b) => b.netProfit - a.netProfit);
+        
+//       setOverallData(sorted);
+//       setLoading(false);
+//     };
+//     fetchPnL();
+//   }, []);
+
+
+
+//   if (loading) {
+//     return (
+//       <View style={styles.center}>
+//         <ActivityIndicator size="large" color="#000" />
+//       </View>
+//     );
+//   }
+
+//   return (
+//     <ScrollView contentContainerStyle={styles.container}>
+//       <View style={styles.grid}>
+//         {overallData.map((item, index) => {
+//           const cardColors = ['#FFDAB9', '#E0FFFF', '#E6E6FA', '#F0FFF0', '#FFE4E1'];
+//           const backgroundColor = cardColors[index % cardColors.length];
+
+//           return (
+//             <TouchableOpacity key={index} style={[styles.card, { backgroundColor }]} onPress={()=>{navigation.navigate('CmpDashboard',{company:item.company})}} >
+//               <Text style={styles.companyName}>{item.company}</Text>
+//               <View style={styles.rowData}>
+//                 <Text style={styles.label}>Revenue:</Text>
+//                 <Text style={styles.value}>{item.totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+//               </View>
+//               <View style={styles.rowData}>
+//                 <Text style={styles.label}>Cost:</Text>
+//                 <Text style={styles.value}>{item.totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+//               </View>
+//               <View style={styles.rowData}>
+//                 <Text style={styles.label}>Net Profit:</Text>
+//                 <Text
+//                   style={[
+//                     styles.value,
+//                     { color: item.netProfit >= 0 ? 'green' : 'red' },
+//                   ]}
+//                 >
+//                   {item.netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+//                 </Text>
+//               </View>
+//             </TouchableOpacity>
+//           );
+//         })}
+//       </View>
+//     </ScrollView>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//   },
+//   grid: {
+//     flexDirection: 'row',
+//     flexWrap: 'wrap',
+//     justifyContent: 'space-between',
+//   },
+//   card: {
+//     width: width > 600 ? '32%' : '100%',
+//     borderRadius: 12,
+//     padding: 15,
+//     marginVertical: 8,
+//     shadowColor: '#000',
+//   },
+//   companyName: {
+//     fontSize: 16,
+//     fontWeight: 'bold',
+//     marginBottom: 40,
+//     color: '#000000',
+//     textAlign: 'left',
+//   },
+//   rowData: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     marginVertical: 2,
+//   },
+//   label: {
+//     fontSize: 13,
+//     color: '#000000',
+//     fontWeight: '600',
+//   },
+//   value: {
+//     fontSize: 13,
+//     color: '#000000',
+//     fontWeight: '600',
+//   },
+//   center: {
+//     flex: 1,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//   },
+// });

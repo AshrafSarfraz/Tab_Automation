@@ -47,19 +47,7 @@ export const accountMapping = {
      "51105": { company: "Assets Services Company", component: "TVR", type: "Cost" },
      "51110": { company: "Assets Services Company", component: "LPG Woqod Consumption", type: "Cost" },
    
-   
 
-     "61101": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
-     "61103": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
-     "61104": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
-     "61105": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
-     "61106": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
-     "61115": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
-     "61116": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
-     "64101": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
-     "64105": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
-     "64121": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
-   
 
     "64117": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },
     "62101": { company: "West Walk Advertisement", component: "Online Marketing", type: "Cost" },
@@ -68,7 +56,20 @@ export const accountMapping = {
     "62110": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },
     "62119": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },
     "62121": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },
-    "62207": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" }
+    "62207": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },
+
+
+    "61101": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+    "61103": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+    "61104": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+    "61105": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+    "61106": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+    "61115": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+    "61116": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+    "64101": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+    "64105": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
+    "64121": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" }
+  
    
    };
    
