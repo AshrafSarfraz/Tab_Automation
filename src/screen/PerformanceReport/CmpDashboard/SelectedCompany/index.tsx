@@ -11,15 +11,17 @@ import {
 } from 'react-native';
 
 import { useRoute } from '@react-navigation/native';
-import { getAllTrialBalances, TrialBalanceRow } from '../../../../database/trailBalanceQueries';
+import {
+  getAllTrialBalances,
+  ManPowerSalaries,
+  TrialBalanceRow,
+  getCompanyPnL,                 // ✅ for yearly nets
+} from '../../../../database/trailBalanceQueries';
 import CustomHeader from '../../../../component/customHeader';
 import { Colors } from '../../../../themes/color';
 
 const {width} = Dimensions.get('window');
-const months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 type RowItem = TrialBalanceRow & {
   isTotalRow?: boolean;
@@ -39,186 +41,327 @@ export default function SelectedCompany() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        setLoading(true);
+
+        // base data
         const allRows = await getAllTrialBalances();
-  
-         // Filter rows by company + type
-         let filteredRows = allRows.filter(row => {
+        const manPowerRows = await ManPowerSalaries();
+        const allPnL = await getCompanyPnL(); // yearly revenue/cost per company
+
+        const splitPercentages: Record<string, number> = {
+          'West Walk Real Estate': 0.22,
+          'Assets Services Company': 0.6851,
+          'West Walk Advertisement': 0.0949,
+        };
+
+        // helper: compute yearly net (after MP allocation) for any company
+        const computeYearlyNetMap = (comp: string): Record<number, number> => {
+          const pct = splitPercentages[comp] ?? 0;
+          const map: Record<number, number> = {};
+          const compPnL = allPnL.filter(p => p.company === comp && p.year !== 'Overall');
+
+          const years = new Set<number>();
+          compPnL.forEach(r => { if (typeof r.year === 'number') years.add(r.year); });
+          manPowerRows.forEach(r => { if (typeof r.year === 'number') years.add(r.year as number); });
+
+          years.forEach(y => {
+            const base = compPnL.find(r => r.year === y);
+            const rev = base?.totalRevenue ?? 0;
+            let cost = base?.totalCost ?? 0;
+
+            // MP allocation
+            if (pct > 0) {
+              const mp = manPowerRows.find(m => m.year === y);
+              if (mp?.totalCost) cost += mp.totalCost * pct;
+            }
+
+            map[y] = rev + cost; // your convention: cost negative aata hai
+          });
+
+          return map;
+        };
+
+        // precompute nets only where needed
+        const ascNetByYear  = (company === 'West Walk Real Estate' || company === 'Assets Services Company')
+          ? computeYearlyNetMap('Assets Services Company') : {};
+        const wwaNetByYear  = (company === 'West Walk Real Estate' || company === 'West Walk Advertisement')
+          ? computeYearlyNetMap('West Walk Advertisement') : {};
+
+        // Filter rows by company + type
+        let filteredRows = allRows.filter(row => {
           let matches = true;
           if (company) matches = matches && row.company === company;
-          if (type) matches = matches && row.type === type;
+          if (type)    matches = matches && row.type === type;
           return matches;
         });
-  
-        // --- Revenue adjustment first ---
+
+        // Revenue adjustment (rename Residential Rental -> Residential)
         filteredRows = filteredRows.map(r => {
           if (r.type === "Revenue" && r.accountno === "41112" && r.cc2 === "Residential Rental") {
             return { ...r, component: "Residential", accountno: "41111" };
           }
           return r;
         });
-  
-        // Sort: Year DESC → Accountno → CC3
+
+        // Sort
         filteredRows.sort((a, b) => {
           if (a.year !== b.year) return (b.year || 0) - (a.year || 0);
           if (a.accountno !== b.accountno) return (a.accountno || "").localeCompare(b.accountno || "");
           return (a.cc3code || "").localeCompare(b.cc3code || "");
         });
-  
-        // Structure by year
+
         const structured: RowItem[] = [];
         const years = Array.from(new Set(filteredRows.map(r => r.year))).sort((a, b) => b - a);
-  
+
         years.forEach(year => {
           const yearRows = filteredRows.filter(r => r.year === year);
-  
+
           // Year Header
           structured.push({ yearHeader: true, company, year } as RowItem);
-  
-          // --- Revenue ---
-          let revenueRows = yearRows.filter(r => r.type === "Revenue");
-  
-          // Group Revenue by accountno + cc3code
+
+          // --- Revenue rows ---
+          const revenueRows = yearRows.filter(r => r.type === "Revenue");
           const revenueByKey: Record<string, RowItem> = {};
           revenueRows.forEach(r => {
             const key = (r.accountno || '') + '||' + (r.cc3code || '');
             if (!revenueByKey[key]) {
               const balances = Array(12).fill(0);
               if (r.month >= 1 && r.month <= 12) balances[r.month - 1] = r.balanceFirst || 0;
-              revenueByKey[key] = {
-                ...r,
-                totalBalances: balances,
-                totalSum: (r.balanceFirst || 0),
-              };
+              revenueByKey[key] = { ...r, totalBalances: balances, totalSum: balances.reduce((a,b)=>a+b,0) };
             } else {
-              if (r.month >= 1 && r.month <= 12) {
-                revenueByKey[key].totalBalances![r.month - 1] += r.balanceFirst || 0;
-              }
-              revenueByKey[key].totalSum = revenueByKey[key].totalBalances!.reduce((a, b) => a + b, 0);
+              if (r.month >= 1 && r.month <= 12) revenueByKey[key].totalBalances![r.month-1] += r.balanceFirst || 0;
+              revenueByKey[key].totalSum = revenueByKey[key].totalBalances!.reduce((a,b)=>a+b,0);
             }
           });
-  
           const groupedRevenue = Object.values(revenueByKey);
+
+          // ✅ inject EXTRA revenue rows (before revenue total)
+          if (!type || type === 'Revenue') {
+            if (company === 'West Walk Real Estate') {
+              // WWA → WWRE revenue
+              const wwaNet = wwaNetByYear[year as number] ?? 0;
+              if (wwaNet !== 0) {
+                const balances = Array(12).fill(wwaNet/12);
+                groupedRevenue.push({
+                  type: 'Revenue',
+                  company,
+                  component: 'Westwalk Marketing Rights',
+                  accountno: 'XFR-WWA',
+                  cc3code: '',
+                  totalBalances: balances,
+                  totalSum: balances.reduce((a,b)=>a+b,0),
+                  year,
+                } as RowItem);
+              }
+            }
+            if (company === 'Assets Services Company') {
+              // ASC self zeroing (revenue += -net)
+              const ascNet = ascNetByYear[year as number] ?? 0;
+              if (ascNet !== 0) {
+                const adj = -ascNet;
+                const balances = Array(12).fill(adj/12);
+                groupedRevenue.push({
+                  type: 'Revenue',
+                  company,
+                  component: 'Contract with Westwalk',
+                  accountno: 'XFR-ASC',
+                  cc3code: '',
+                  totalBalances: balances,
+                  totalSum: balances.reduce((a,b)=>a+b,0),
+                  year,
+                } as RowItem);
+              }
+            }
+          }
+
           structured.push(...groupedRevenue);
-  
-          // Revenue total row
-          if (groupedRevenue.length > 0) {
+
+          // Revenue total
+          if (groupedRevenue.length) {
             const revBalances = Array(12).fill(0);
-            groupedRevenue.forEach(r => r.totalBalances?.forEach((b, i) => { revBalances[i] += b; }));
+            groupedRevenue.forEach(r => r.totalBalances?.forEach((b,i)=>revBalances[i]+=b));
             structured.push({
               isTotalRow: true,
               totalType: "Revenue",
               company,
               totalBalances: revBalances,
-              totalSum: revBalances.reduce((a, b) => a + b, 0),
+              totalSum: revBalances.reduce((a,b)=>a+b,0),
+              year,
             } as RowItem);
           }
 
-
-
-
-          // --- Cost: group by accountno + auxcode ---
+          // --- Cost rows ---
           const costRows = yearRows.filter(r => r.type === "Cost");
           let groupedCost: RowItem[] = [];
           const costByKey: Record<string, TrialBalanceRow[]> = {};
-  
           costRows.forEach(r => {
             if (!r.accountno) return;
             const key = r.accountno + '||' + (r.auxcode || '');
             if (!costByKey[key]) costByKey[key] = [];
             costByKey[key].push(r);
           });
-  
           Object.keys(costByKey).forEach(key => {
             const rows = costByKey[key];
-            const summedBalances = Array(12).fill(0);
-            rows.forEach(r => {
-              if (r.month >= 1 && r.month <= 12) summedBalances[r.month - 1] += r.balanceFirst || 0;
-            });
+            const balances = Array(12).fill(0);
+            rows.forEach(r => { if (r.month>=1 && r.month<=12) balances[r.month-1]+=r.balanceFirst||0; });
             groupedCost.push({
               type: "Cost",
               company,
               accountno: rows[0].accountno,
               auxcode: rows[0].auxcode,
-              component: rows[0].component || "",
+              component: rows[0].component||"",
               cc2: rows[0].cc2,
               cc3code: rows[0].cc3code,
-              totalBalances: summedBalances,
-              totalSum: summedBalances.reduce((a, b) => a + b, 0),
+              totalBalances: balances,
+              totalSum: balances.reduce((a,b)=>a+b,0),
+              year,
             } as RowItem);
           });
-  
-          // --- Merge rows with empty auxcode & same component ---
+
+          // Merge empty auxcode rows
           const emptyAuxRows = groupedCost.filter(r => !r.auxcode);
           const mergedMap: Record<string, RowItem> = {};
-  
-          emptyAuxRows.forEach(r => {
-            const key = r.component || '';
-            if (!mergedMap[key]) {
-              mergedMap[key] = { ...r };
-            } else {
-              // Merge balances
-              mergedMap[key].totalBalances = mergedMap[key].totalBalances?.map(
-                (b, i) => b + (r.totalBalances?.[i] || 0)
-              );
-              mergedMap[key].totalSum = mergedMap[key].totalBalances?.reduce((a, b) => a + b, 0);
-              mergedMap[key].accountno += ', ' + r.accountno; // combine account numbers
+          emptyAuxRows.forEach(r=>{
+            const key = r.component||'';
+            if(!mergedMap[key]) mergedMap[key]={...r};
+            else {
+              mergedMap[key].totalBalances = mergedMap[key].totalBalances?.map((b,i)=>b+(r.totalBalances?.[i]||0));
+              mergedMap[key].totalSum = mergedMap[key].totalBalances?.reduce((a,b)=>a+b,0);
+              mergedMap[key].accountno += ', '+r.accountno;
             }
           });
-  
-          // Remove original empty auxcode rows and add merged rows
-          groupedCost = groupedCost.filter(r => r.auxcode);
+          groupedCost = groupedCost.filter(r=>r.auxcode);
           groupedCost.push(...Object.values(mergedMap));
-  
+
+          // --- Add ManPower rows (ASC = 5 splits, others = single) ---
+          if ((!type || type === 'Cost') && splitPercentages[company]) {
+            const mpRow = manPowerRows.find(m => m.year === year);
+            if (mpRow) {
+              if (company === "Assets Services Company") {
+                const mpSplit = [
+                  { name: "HouseKeeping-MP", percent: 0.4350 },
+                  { name: "Maintaince-MP",   percent: 0.4050 },
+                  { name: "Security-MP",     percent: 0.12 },
+                  { name: "Store-MP",        percent: 0.03 },
+                  { name: "Landscape",       percent: 0.01 },
+                ];
+                mpSplit.forEach(split => {
+                  const total = mpRow.totalCost * splitPercentages[company] * split.percent;
+                  const balances = Array(12).fill(total / 12);
+                  groupedCost.push({
+                    type: 'Cost',
+                    company,
+                    component: split.name,
+                    accountno: 'MP',
+                    auxcode: '',
+                    totalBalances: balances,
+                    totalSum: balances.reduce((a,b)=>a+b,0),
+                    year,
+                  } as RowItem);
+                });
+              } else {
+                const total = mpRow.totalCost * splitPercentages[company];
+                const balances = Array(12).fill(total / 12);
+                groupedCost.push({
+                  type: 'Cost',
+                  company,
+                  component: 'ManPower',
+                  accountno: 'MP',
+                  auxcode: '',
+                  totalBalances: balances,
+                  totalSum: balances.reduce((a,b)=>a+b,0),
+                  year,
+                } as RowItem);
+              }
+            }
+          }
+
+          // ✅ inject EXTRA cost rows (before cost total)
+          if (!type || type === 'Cost') {
+            if (company === 'West Walk Real Estate') {
+              // ASC → WWRE cost
+              const ascNet = ascNetByYear[year as number] ?? 0;
+              if (ascNet !== 0) {
+                const balances = Array(12).fill((-ascNet)/12);
+                groupedCost.push({
+                  type: 'Cost',
+                  company,
+                  component: 'FM Cost',
+                  accountno: 'XFR-ASC',
+                  auxcode: '',
+                  totalBalances: balances,
+                  totalSum: balances.reduce((a,b)=>a+b,0),
+                  year,
+                } as RowItem);
+              }
+            }
+            if (company === 'West Walk Advertisement') {
+              // WWA self zeroing (cost += -net)
+              const wwaNet = wwaNetByYear[year as number] ?? 0;
+              if (wwaNet !== 0) {
+                const balances = Array(12).fill((-wwaNet)/12);
+                groupedCost.push({
+                  type: 'Cost',
+                  company,
+                  component: 'Westwalk Marketing Rights',
+                  accountno: 'XFR-WWA',
+                  auxcode: '',
+                  totalBalances: balances,
+                  totalSum: balances.reduce((a,b)=>a+b,0),
+                  year,
+                } as RowItem);
+              }
+            }
+          }
+
           structured.push(...groupedCost);
-  
-          // --- Cost total row ---
-          if (groupedCost.length > 0) {
+
+          // Cost total
+          if(groupedCost.length){
             const costBalances = Array(12).fill(0);
-            groupedCost.forEach(r => r.totalBalances?.forEach((b, i) => { costBalances[i] += b; }));
+            groupedCost.forEach(r => r.totalBalances?.forEach((b,i)=>costBalances[i]+=b));
             structured.push({
-              isTotalRow: true,
-              totalType: "Cost",
+              isTotalRow:true,
+              totalType:'Cost',
               company,
               totalBalances: costBalances,
-              totalSum: costBalances.reduce((a, b) => a + b, 0),
+              totalSum: costBalances.reduce((a,b)=>a+b,0),
+              year,
             } as RowItem);
           }
-  
-          // --- Net Profit (Revenue - Cost) ---
-          if (revenueRows.length > 0 || groupedCost.length > 0) {
-            const netBalances = Array(12).fill(0);
-            for (let i = 0; i < 12; i++) {
-              const rev = revenueRows.reduce((sum, r) => sum + (r.month === i + 1 ? r.balanceFirst || 0 : 0), 0);
-              const cost = groupedCost.reduce((sum, r) => sum + (r.totalBalances?.[i] || 0), 0);
-              netBalances[i] = rev - cost;
-            }
-            structured.push({
-              isTotalRow: true,
-              totalType: "Grand",
-              company,
-              totalBalances: netBalances,
-              totalSum: netBalances.reduce((a, b) => a + b, 0),
-            } as RowItem);
+
+          // Net Profit (Grand) — include injected rows
+          const netBalances = Array(12).fill(0);
+          for(let i=0;i<12;i++){
+            const rev = groupedRevenue.reduce((sum,r)=>sum+(r.totalBalances?.[i]||0),0);
+            const cst = groupedCost.reduce((sum,r)=>sum+(r.totalBalances?.[i]||0),0);
+            netBalances[i] = rev + cst;  // your convention
           }
-  
+          structured.push({
+            isTotalRow:true,
+            totalType:'Grand',
+            company,
+            totalBalances: netBalances,
+            totalSum: netBalances.reduce((a,b)=>a+b,0),
+            year,
+          } as RowItem);
         });
-  
+
         setData(structured);
-      } catch (err) {
-        setError('Failed to load trial balance from SQLite');
+      } catch(err){
+        setError('Failed to load trial balance');
         console.log(err);
       } finally {
         setLoading(false);
       }
     };
-  
+
     loadData();
   }, [company, type]);
-  
 
   const renderHeader = () => (
     <View style={[styles.row, styles.header]}>
-      <Text style={[styles.cell, {width: 90}]}>Type</Text>
+      <Text style={[styles.cell, {width: 150}]}>Type</Text>
       <Text style={[styles.cell, {width: 180}]}>Component</Text>
       <Text style={[styles.cell, {width: 100}]}>Account</Text>
       <Text style={[styles.cell, {width: 100}]}>CC3/AuxCode</Text>
@@ -226,7 +369,6 @@ export default function SelectedCompany() {
       {months.map(m => (
         <Text key={m} style={[styles.cell, {width: 120, textAlign: 'right'}]}>{m}</Text>
       ))}
-     
     </View>
   );
 
@@ -241,7 +383,6 @@ export default function SelectedCompany() {
       );
     }
 
-    // Total row (Revenue / Cost / Grand)
     if (item.isTotalRow) {
       let bgColor = '#f0f8ff';
       if (item.totalType === 'Revenue') bgColor = '#d1f7d1';
@@ -251,20 +392,22 @@ export default function SelectedCompany() {
 
       return (
         <View style={[styles.row, {backgroundColor: bgColor, borderTopWidth: 2, borderColor: '#aaa'}]}>
-          <Text style={[styles.cell, {width: 90, fontWeight: 'bold'}]}>{label}</Text>
+          <Text style={[styles.cell, {width: 150, fontWeight: 'bold'}]}>{label}</Text>
           <Text style={[styles.cell, {width: 180}]}>{item.company}</Text>
           <Text style={[styles.cell, {width: 100}]}></Text>
           <Text style={[styles.cell, {width: 100}]}></Text>
-          <Text style={[styles.cell, {width: 100, textAlign: 'right', fontWeight: 'bold'}]}>{item.totalSum?.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+          <Text style={[styles.cell, {width: 100, textAlign: 'right', fontWeight: 'bold'}]}>
+            {item.totalSum?.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+          </Text>
           {item.totalBalances?.map((b, idx) => (
-            <Text key={idx} style={[styles.cell, {width: 120, textAlign: 'right', fontWeight: 'bold'}]}>{b.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+            <Text key={idx} style={[styles.cell, {width: 120, textAlign: 'right', fontWeight: 'bold'}]}>
+              {b.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            </Text>
           ))}
-        
         </View>
       );
     }
 
-    // Normal row
     const balances: number[] = item.totalBalances
       ? item.totalBalances
       : Array(12).fill(0).map((_, i) => (i + 1 === item.month ? item.balanceFirst || 0 : 0));
@@ -272,15 +415,20 @@ export default function SelectedCompany() {
 
     return (
       <View style={styles.row}>
-        <Text style={[styles.cell, {width: 90}]}>{item.type}</Text>
+        <Text style={[styles.cell, {width: 150}]}>{item.type}</Text>
         <Text style={[styles.cell, {width: 180}]}>{item.component}</Text>
         <Text style={[styles.cell, {width: 100}]}>{item.accountno}</Text>
-        <Text style={[styles.cell, {width: 100}]}>    {item.type === 'Revenue' ? item.cc3code : item.auxcode}</Text>
-        <Text style={[styles.cell, {width: 100, textAlign: 'right'}]}>{total.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+        <Text style={[styles.cell, {width: 100}]}>
+          {item.type === 'Revenue' ? item.cc3code : item.auxcode}
+        </Text>
+        <Text style={[styles.cell, {width: 100, textAlign: 'right'}]}>
+          {total.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+        </Text>
         {balances.map((b, idx) => (
-          <Text key={idx} style={[styles.cell, {width: 120, textAlign: 'right'}]}>{b.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
+          <Text key={idx} style={[styles.cell, {width: 120, textAlign: 'right'}]}>
+            {b.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+          </Text>
         ))}
-      
       </View>
     );
   };
@@ -330,16 +478,6 @@ const styles = StyleSheet.create({
   },
   header: {backgroundColor: Colors.Bg, borderBottomWidth: 2},
   cell: {paddingHorizontal: 8, fontSize: width > 600 ? 12: 12},
-  yearHeader: {
-    backgroundColor: '#eee',
-    borderBottomWidth: 1,
-    borderColor: '#ccc',
-    paddingVertical: 4,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 40,
-  },
+  yearHeader: { backgroundColor: '#eee', borderBottomWidth: 1, borderColor: '#ccc', paddingVertical: 4 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 40 },
 });

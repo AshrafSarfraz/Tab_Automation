@@ -49,14 +49,14 @@ export const accountMapping = {
    
 
 
-    "64117": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },
+    "64117": { company: "West Walk Advertisement", component: "Events", type: "Cost" },
     "62101": { company: "West Walk Advertisement", component: "Online Marketing", type: "Cost" },
     "62104": { company: "West Walk Advertisement", component: "Offline Marketing", type: "Cost" },
-    "62106": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },
-    "62110": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },
-    "62119": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },
-    "62121": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },
-    "62207": { company: "West Walk Advertisement", component: "Cost Item", type: "Cost" },
+    "62106": { company: "West Walk Advertisement", component: "Events", type: "Cost" },
+    "62110": { company: "West Walk Advertisement", component: "Events", type: "Cost" },
+    "62119": { company: "West Walk Advertisement", component: "Events", type: "Cost" },
+    "62121": { company: "West Walk Advertisement", component: "Events", type: "Cost" },
+    "62207": { company: "West Walk Advertisement", component: "Events", type: "Cost" },
 
 
     "61101": { company: "Man Power / Salaries", component: "Man Power - Office Staff", type: "Cost" },
