@@ -132,7 +132,7 @@ export default function CmpDashboard({ navigation, route }) {
         const wwaNet = wwaBase.get(y)?.net ?? 0;
 
         // ASC net → WWRE cost (expense it): cost += -ascNet
-        combined[i].totalCost += -ascNet;
+        combined[i].totalCost += ascNet;
 
         // WWA net → WWRE revenue: revenue += +wwaNet
         combined[i].totalRevenue += wwaNet;

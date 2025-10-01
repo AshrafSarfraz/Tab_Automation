@@ -19,13 +19,17 @@
     "@reduxjs/toolkit": "^2.9.0",
     "react": "19.0.0",
     "react-native": "0.78.0",
+    "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.25.0",
+    "react-native-html-to-pdf": "^1.3.0",
     "react-native-safe-area-context": "^5.4.0",
     "react-native-screens": "^4.10.0",
+    "react-native-share": "^12.2.0",
     "react-native-sqlite-storage": "^6.0.1",
     "react-native-webview": "^13.16.0",
     "react-redux": "^9.2.0",
-    "redux-persist": "^6.0.0"
+    "redux-persist": "^6.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
