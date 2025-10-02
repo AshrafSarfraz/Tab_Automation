@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View, Text, Dimensions, TouchableOpacity } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import Pnl_card from '../../../../component/cards/pnl_card';
 import { Colors } from '../../../../themes/color';
 import CustomHeader from '../../../../component/customHeader';
@@ -50,9 +50,10 @@ const Ceo_Dashboard = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+     <View style={{backgroundColor:Colors.PrimaryColor,padding:20}} >
       <CustomHeader title="Dashboard" />
-      <ScrollView showsVerticalScrollIndicator={false}  >
-        <Text style={styles.headerTxt}>Summary Report</Text>
+      </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{marginHorizontal:width>600?40:20}} >
         <Pnl_card navigation={navigation}/>      
       </ScrollView>
     </View>
@@ -65,8 +66,6 @@ const Ceo_Dashboard = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: width>600?24:20,
-    paddingVertical: 30,
     backgroundColor: Colors.White,
   },
   headerTxt: {

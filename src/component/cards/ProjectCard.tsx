@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAllTrialBalances, getCompanyPnL, ManPowerSalaries, TrialBalanceRow } from '../../database/trailBalanceQueries';
+import { Colors } from '../../themes/color';
 
 interface PnLRow {
   company: string;
@@ -435,7 +436,7 @@ export default function Companies({ navigation }) {
   
   
   const cardSizeStyle = useMemo(
-    () => (isWide ? { flexBasis: '32%', maxWidth: '32%' } : { flexBasis: '100%', maxWidth: '100%' }),
+    () => (isWide ? { flexBasis: '31%', maxWidth: '31%' } : { flexBasis: '100%', maxWidth: '100%' }),
     [isWide]
   );
 
@@ -459,7 +460,7 @@ export default function Companies({ navigation }) {
           return (
             <TouchableOpacity
               key={item.company}
-              style={[styles.card, cardSizeStyle, { backgroundColor }]}
+              style={[styles.card, cardSizeStyle]}
               onPress={() => navigation.navigate('CmpDashboard', { company: item.company })}
             >
               <Text style={styles.companyName}>{item.company}</Text>
@@ -471,7 +472,7 @@ export default function Companies({ navigation }) {
               </View>
               <View style={styles.rowData}>
                 <Text style={styles.label}>Cost:</Text>
-                <Text style={styles.value}>
+                <Text style={[styles.value,{color:'red'}]}>
                   {item.totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                 </Text>
               </View>
@@ -490,7 +491,7 @@ export default function Companies({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 12 },
+  container: {},
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -498,15 +499,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   card: {
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    backgroundColor:Colors.White,
+    height:150,
+    borderRadius: 14,
+    paddingVertical: 18,
+    paddingHorizontal:16,
+    borderWidth:0.3
   },
-  companyName: { fontSize: 16, fontWeight: '700', marginBottom: 6 },
+  companyName: { fontSize: 16, fontWeight: '700', marginBottom: 22 },
   rowData: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 2 },
-  label: { fontSize: 13, fontWeight: '600' },
-  value: { fontSize: 13, fontWeight: '700' },
+  label: { fontSize: 13, fontWeight: '600',marginBottom:2 },
+  value: { fontSize: 13, fontWeight: '700',marginBottom:2 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 40 },
 });

@@ -39,12 +39,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom:10
+
   },
   icon:{
     height:width>600?30:24,
     width:width>600?30:24,
-    tintColor:Colors.PrimaryColor
+    tintColor:Colors.White
   },
 
   backButton: {
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: width>600?24:16,
-    color: 'black',
+    color:Colors.White,
     fontWeight: 'bold',
   },
 });

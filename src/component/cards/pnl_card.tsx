@@ -51,19 +51,19 @@ const PnlCardModern = ({ navigation }) => {
   const metrics = [
     {
       label: 'Net Profit',
-      value: `${overall.netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })} QAR`,
+      value: `${overall.netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
       color: Colors.Green,
       type: null,
     },
     {
       label: 'Total Revenue',
-      value: `${overall.totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })} QAR`,
-      color: Colors.Green,
+      value: `${overall.totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
+      color: Colors.Black,
       type: 'Revenue',
     },
     {
       label: 'Total Expense',
-      value: `${overall.totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })} QAR`,
+      value: `${overall.totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}`,
       color: 'red',
       type: 'Cost',
     },
@@ -93,15 +93,14 @@ const PnlCardModern = ({ navigation }) => {
 
   return (
     <View style={styles.card}>
-      {/* Metrics */}
+      <Text style={styles.Summary_Txt} >Summary Report</Text>
       <View
-        style={[styles.metricsRow, { flexDirection: isTablet ? 'row' : 'column' }]}
-      >
+        style={[styles.metricsRow, { flexDirection: isTablet ? 'row' : 'column' }]}>
         {metrics.map((metric, index) => (
           <TouchableOpacity
             key={index}
-            style={[styles.metricBox, { width: isTablet ? '32%' : '100%' }]}
-            onPress={() => handleMetricClick(metric.type)}
+            style={[styles.metricBox, { width: isTablet ? '31%' : '100%' }]}
+            // onPress={() => handleMetricClick(metric.type)}
           >
             <Text style={styles.metricLabel}>{metric.label}</Text>
             <Text style={[styles.metricValue, { color: metric.color }]}>
@@ -113,10 +112,12 @@ const PnlCardModern = ({ navigation }) => {
 
       {/* Companies */}
       <Text style={styles.title}>Companies</Text>
+     
+     
       <Companies navigation={navigation} />
 
       {/* Yearly Table */}
-      <Text style={styles.title}>Yearly Report</Text>
+      <Text style={styles.Year_Txt}>Yearly Report</Text>
       <View style={styles.tableContainer}>
         {/* Header */}
         <View style={[styles.tableRow, styles.header]}>
@@ -156,44 +157,59 @@ const PnlCardModern = ({ navigation }) => {
 export default PnlCardModern;
 
 const styles = StyleSheet.create({
+  Summary_Txt:{
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    marginTop:20,
+    color: Colors.Black,
+  },
   card: {
     backgroundColor: Colors.White,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 10,
-    padding: 12,
+
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 15,
-    marginBottom: 5,
-    color: Colors.PrimaryColor,
+    marginTop: 6,
+    marginBottom: 15,
+    color: Colors.Black,
+  },
+  Year_Txt:{
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 15,
+    color: Colors.Black,
   },
   metricsRow: {
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   metricBox: {
-    backgroundColor: Colors.CardColor,
-    borderRadius: 12,
-    paddingVertical: 30,
-    paddingHorizontal: 12,
+    height:130,
+    backgroundColor: '#f9f8f9',
+    borderRadius: 8,
+    padding:20,
     alignItems: 'center',
     marginBottom: 12,
-    borderWidth: 0.2,
-    borderColor: Colors.Grey,
+    borderWidth: 0.3,
+
   },
   metricLabel: {
-    fontSize: 14,
+    fontSize: 16,
     color: Colors.Black,
-    marginBottom: 6,
-    textAlign: 'center',
+    marginBottom: 16,
+    fontWeight:"bold",
+    alignSelf:"flex-start",
+    justifyContent:"flex-start"
   },
   metricValue: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: 'bold',
     textAlign: 'center',
   },
   tableContainer: {
@@ -201,6 +217,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#fff',
+    marginBottom:60
   },
   tableRow: {
     width: '100%',

@@ -43,6 +43,7 @@ export default function SelectedCompany() {
   const [error, setError] = useState<string | null>(null);
 
 
+ 
   // useEffect(() => {
   //   const loadData = async () => {
   //     try {
@@ -50,7 +51,7 @@ export default function SelectedCompany() {
   
   //       // base data
   //       const allRows = await getAllTrialBalances();
-  //       const allPnL = await getCompanyPnL(); // yearly revenue/cost per company
+  //       const allPnL  = await getCompanyPnL(); // yearly revenue/cost per company
   
   //       const splitPercentages: Record<string, number> = {
   //         'West Walk Real Estate': 0.22,
@@ -58,14 +59,12 @@ export default function SelectedCompany() {
   //         'West Walk Advertisement': 0.0949,
   //       };
   
-  //       // -------- MP: Build MONTHLY from trial_balance rows (not from ManPowerSalaries) --------
-  //       // we read MP even if the screen is for some other company (allocation depends on MP pool)
+  //       // -------- MP: Build MONTHLY from trial_balance rows --------
   //       const MP_NAME = 'Man Power / Salaries';
   //       const mpRowsFromAll = allRows.filter(
   //         r => r.type === 'Cost' && (r.company || '').trim() === MP_NAME
   //       );
   
-  //       // monthly MP map: { [year]: number[12] }
   //       const monthlyMpByYear: Record<number, number[]> = {};
   //       mpRowsFromAll.forEach(r => {
   //         const y = Number(r.year);
@@ -73,10 +72,33 @@ export default function SelectedCompany() {
   //         if (!y || !m) return;
   //         if (!monthlyMpByYear[y]) monthlyMpByYear[y] = Array(12).fill(0);
   //         const idx = Math.min(11, Math.max(0, m - 1));
-  //         monthlyMpByYear[y][idx] += r.balanceFirst || 0; // keep cost sign as-is
+  //         monthlyMpByYear[y][idx] += r.balanceFirst || 0; // keep sign as-is
   //       });
   
-  //       // -------- Yearly net after MP allocation (sum of monthly * pct) --------
+  //       // -------- helper: MONTHLY net (pre-zero) for any company/year --------
+  //       const buildMonthlyNet = (comp: string, yr: number): number[] => {
+  //         const pct = splitPercentages[comp] ?? 0;
+  //         const rev = Array(12).fill(0);
+  //         const cst = Array(12).fill(0);
+  
+  //         // company monthly revenue/cost from TB
+  //         allRows.forEach(r => {
+  //           if (r.company !== comp) return;
+  //           if (r.year !== yr) return;
+  //           if (!(r.month >= 1 && r.month <= 12)) return;
+  //           const i = (r.month as number) - 1;
+  //           if (r.type === 'Revenue') rev[i] += r.balanceFirst || 0;
+  //           else if (r.type === 'Cost') cst[i] += r.balanceFirst || 0;
+  //         });
+  
+  //         const mpMonths = monthlyMpByYear[yr] ?? Array(12).fill(0);
+  //         return Array.from({ length: 12 }, (_, i) => {
+  //           const mpAlloc = mpMonths[i] * pct;
+  //           return rev[i] + (cst[i] + mpAlloc); // your convention (cost negative)
+  //         });
+  //       };
+  
+  //       // -------- Yearly net after MP (still used for summaries where needed) --------
   //       const computeYearlyNetMap = (comp: string): Record<number, number> => {
   //         const pct = splitPercentages[comp] ?? 0;
   //         const map: Record<number, number> = {};
@@ -90,26 +112,24 @@ export default function SelectedCompany() {
   //           const base = compPnL.find(r => r.year === y);
   //           const rev = base?.totalRevenue ?? 0;
   //           let cost = base?.totalCost ?? 0;
-  
   //           if (pct > 0) {
   //             const mpMonths = monthlyMpByYear[y] ?? Array(12).fill(0);
-  //             const mpAllocatedYear = mpMonths.reduce((a,b)=>a+b,0) * pct; // ✅ monthly sum * pct
+  //             const mpAllocatedYear = mpMonths.reduce((a,b)=>a+b,0) * pct;
   //             cost += mpAllocatedYear;
   //           }
-  
-  //           map[y] = rev + cost; // (your convention: costs may be negative already)
+  //           map[y] = rev + cost;
   //         });
   
   //         return map;
   //       };
   
-  //       // precompute nets only where needed
+  //       // precompute yearly nets if needed elsewhere
   //       const ascNetByYear  = (company === 'West Walk Real Estate' || company === 'Assets Services Company')
   //         ? computeYearlyNetMap('Assets Services Company') : {};
   //       const wwaNetByYear  = (company === 'West Walk Real Estate' || company === 'West Walk Advertisement')
   //         ? computeYearlyNetMap('West Walk Advertisement') : {};
   
-  //       // -------- Filter rows by company + type (unchanged) --------
+  //       // -------- Filter by company + type --------
   //       let filteredRows = allRows.filter(row => {
   //         let matches = true;
   //         if (company) matches = matches && row.company === company;
@@ -141,7 +161,7 @@ export default function SelectedCompany() {
   //         // Year Header
   //         structured.push({ yearHeader: true, company, year } as RowItem);
   
-  //         // --- Revenue rows (unchanged) ---
+  //         // --- Revenue rows ---
   //         const revenueRows = yearRows.filter(r => r.type === "Revenue");
   //         const revenueByKey: Record<string, RowItem> = {};
   //         revenueRows.forEach(r => {
@@ -157,29 +177,29 @@ export default function SelectedCompany() {
   //         });
   //         const groupedRevenue = Object.values(revenueByKey);
   
-  //         // inject EXTRA revenue rows (unchanged)
+  //         // ✅ inject EXTRA revenue rows — MONTHLY (no /12 spread)
   //         if (!type || type === 'Revenue') {
   //           if (company === 'West Walk Real Estate') {
-  //             const wwaNet = wwaNetByYear[year as number] ?? 0;
-  //             if (wwaNet !== 0) {
-  //               const balances = Array(12).fill(wwaNet/12);
+  //             // WWA → WWRE revenue (monthly pre-zero net of WWA)
+  //             const wwaMonthlyNet = buildMonthlyNet('West Walk Advertisement', year as number);
+  //             if (wwaMonthlyNet.some(v => v !== 0)) {
   //               groupedRevenue.push({
   //                 type: 'Revenue',
   //                 company,
   //                 component: 'Westwalk Marketing Rights',
   //                 accountno: 'XFR-WWA',
   //                 cc3code: '',
-  //                 totalBalances: balances,
-  //                 totalSum: balances.reduce((a,b)=>a+b,0),
+  //                 totalBalances: wwaMonthlyNet,
+  //                 totalSum: wwaMonthlyNet.reduce((a,b)=>a+b,0),
   //                 year,
   //               } as RowItem);
   //             }
   //           }
   //           if (company === 'Assets Services Company') {
-  //             const ascNet = ascNetByYear[year as number] ?? 0;
-  //             if (ascNet !== 0) {
-  //               const adj = -ascNet;
-  //               const balances = Array(12).fill(adj/12);
+  //             // ASC self zeroing: revenue += -monthly net of ASC
+  //             const ascMonthlyNet = buildMonthlyNet('Assets Services Company', year as number);
+  //             const balances = ascMonthlyNet.map(n => -n);
+  //             if (balances.some(v => v !== 0)) {
   //               groupedRevenue.push({
   //                 type: 'Revenue',
   //                 company,
@@ -210,7 +230,7 @@ export default function SelectedCompany() {
   //           } as RowItem);
   //         }
   
-  //         // --- Cost rows (unchanged) ---
+  //         // --- Cost rows ---
   //         const costRows = yearRows.filter(r => r.type === "Cost");
   //         let groupedCost: RowItem[] = [];
   //         const costByKey: Record<string, TrialBalanceRow[]> = {};
@@ -238,7 +258,7 @@ export default function SelectedCompany() {
   //           } as RowItem);
   //         });
   
-  //         // Merge empty auxcode rows (unchanged)
+  //         // Merge empty auxcode rows
   //         const emptyAuxRows = groupedCost.filter(r => !r.auxcode);
   //         const mergedMap: Record<string, RowItem> = {};
   //         emptyAuxRows.forEach(r=>{
@@ -253,7 +273,7 @@ export default function SelectedCompany() {
   //         groupedCost = groupedCost.filter(r=>r.auxcode);
   //         groupedCost.push(...Object.values(mergedMap));
   
-  //         // --- ✅ Add ManPower rows (MONTHLY percentages from monthlyMpByYear) ---
+  //         // ✅ Add ManPower rows (MONTHLY percentages — already monthly, no /12)
   //         if ((!type || type === 'Cost') && splitPercentages[company]) {
   //           const mpMonths = monthlyMpByYear[year as number] ?? Array(12).fill(0);
   
@@ -293,12 +313,13 @@ export default function SelectedCompany() {
   //           }
   //         }
   
-  //         // injected EXTRA cost rows (unchanged)
+  //         // ✅ injected EXTRA cost rows — MONTHLY (no /12 spread)
   //         if (!type || type === 'Cost') {
   //           if (company === 'West Walk Real Estate') {
-  //             const ascNet = ascNetByYear[year as number] ?? 0;
-  //             if (ascNet !== 0) {
-  //               const balances = Array(12).fill((ascNet)/12);
+  //             // ASC → WWRE cost: add expense = -ASC monthly net
+  //             const ascMonthlyNet = buildMonthlyNet('Assets Services Company', year as number);
+  //             const balances = ascMonthlyNet.map(n => n);
+  //             if (balances.some(v => v !== 0)) {
   //               groupedCost.push({
   //                 type: 'Cost',
   //                 company,
@@ -312,9 +333,10 @@ export default function SelectedCompany() {
   //             }
   //           }
   //           if (company === 'West Walk Advertisement') {
-  //             const wwaNet = wwaNetByYear[year as number] ?? 0;
-  //             if (wwaNet !== 0) {
-  //               const balances = Array(12).fill((-wwaNet)/12);
+  //             // WWA self zeroing: cost += -monthly net of WWA
+  //             const wwaMonthlyNet = buildMonthlyNet('West Walk Advertisement', year as number);
+  //             const balances = wwaMonthlyNet.map(n => -n);
+  //             if (balances.some(v => v !== 0)) {
   //               groupedCost.push({
   //                 type: 'Cost',
   //                 company,
@@ -373,6 +395,7 @@ export default function SelectedCompany() {
   
   //   loadData();
   // }, [company, type]);
+  
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -387,6 +410,10 @@ export default function SelectedCompany() {
           'Assets Services Company': 0.6851,
           'West Walk Advertisement': 0.0949,
         };
+  
+        // 👉 clubbed accounts (revenue) — cc3-wise clubbing
+        const CLUB_ACCOUNTS = new Set(['44104','44107','44122','44124','44125']);
+        const CLUB_ACCOUNTS_LABEL = '44104,44107,44122,44124,44125';
   
         // -------- MP: Build MONTHLY from trial_balance rows --------
         const MP_NAME = 'Man Power / Salaries';
@@ -434,7 +461,7 @@ export default function SelectedCompany() {
           const compPnL = allPnL.filter(p => p.company === comp && p.year !== 'Overall');
   
           const years = new Set<number>();
-          compPnL.forEach(r => { if (typeof r.year === 'number') years.add(r.year); });
+          compPnL.forEach(r => { if (typeof r.year === 'number') years.add(r.year as number); });
           Object.keys(monthlyMpByYear).forEach(y => years.add(Number(y)));
   
           years.forEach(y => {
@@ -490,26 +517,45 @@ export default function SelectedCompany() {
           // Year Header
           structured.push({ yearHeader: true, company, year } as RowItem);
   
-          // --- Revenue rows ---
+          // --- Revenue rows (with cc3-wise clubbing for 44104/44107/44122/44124/44125) ---
           const revenueRows = yearRows.filter(r => r.type === "Revenue");
           const revenueByKey: Record<string, RowItem> = {};
           revenueRows.forEach(r => {
-            const key = (r.accountno || '') + '||' + (r.cc3code || '');
+            const isClubbed = r.accountno && CLUB_ACCOUNTS.has(String(r.accountno));
+            const cc3 = r.cc3code || '';
+            const key = isClubbed
+              ? `CLUB::${cc3}`                         // cc3-wise clubbing
+              : `${r.accountno || ''}||${cc3}`;        // normal grouping
+  
             if (!revenueByKey[key]) {
               const balances = Array(12).fill(0);
-              if (r.month >= 1 && r.month <= 12) balances[r.month - 1] = r.balanceFirst || 0;
-              revenueByKey[key] = { ...r, totalBalances: balances, totalSum: balances.reduce((a,b)=>a+b,0) };
+              if (r.month >= 1 && r.month <= 12) balances[(r.month as number) - 1] = r.balanceFirst || 0;
+  
+              revenueByKey[key] = {
+                ...r,
+                component: isClubbed ? cc3 : (r.component || ''),
+                accountno: isClubbed ? CLUB_ACCOUNTS_LABEL : (r.accountno || ''),
+                cc3code: cc3,
+                totalBalances: balances,
+                totalSum: balances.reduce((a,b)=>a+b,0),
+              };
             } else {
-              if (r.month >= 1 && r.month <= 12) revenueByKey[key].totalBalances![r.month-1] += r.balanceFirst || 0;
+              if (r.month >= 1 && r.month <= 12) {
+                revenueByKey[key].totalBalances![(r.month as number) - 1] += r.balanceFirst || 0;
+              }
               revenueByKey[key].totalSum = revenueByKey[key].totalBalances!.reduce((a,b)=>a+b,0);
+  
+              if (isClubbed) {
+                revenueByKey[key].component = cc3;
+                revenueByKey[key].accountno = CLUB_ACCOUNTS_LABEL;
+              }
             }
           });
           const groupedRevenue = Object.values(revenueByKey);
   
-          // ✅ inject EXTRA revenue rows — MONTHLY (no /12 spread)
+          // inject EXTRA revenue rows — MONTHLY (no /12 spread)
           if (!type || type === 'Revenue') {
             if (company === 'West Walk Real Estate') {
-              // WWA → WWRE revenue (monthly pre-zero net of WWA)
               const wwaMonthlyNet = buildMonthlyNet('West Walk Advertisement', year as number);
               if (wwaMonthlyNet.some(v => v !== 0)) {
                 groupedRevenue.push({
@@ -525,7 +571,6 @@ export default function SelectedCompany() {
               }
             }
             if (company === 'Assets Services Company') {
-              // ASC self zeroing: revenue += -monthly net of ASC
               const ascMonthlyNet = buildMonthlyNet('Assets Services Company', year as number);
               const balances = ascMonthlyNet.map(n => -n);
               if (balances.some(v => v !== 0)) {
@@ -559,7 +604,7 @@ export default function SelectedCompany() {
             } as RowItem);
           }
   
-          // --- Cost rows ---
+          // --- Cost rows (unchanged) ---
           const costRows = yearRows.filter(r => r.type === "Cost");
           let groupedCost: RowItem[] = [];
           const costByKey: Record<string, TrialBalanceRow[]> = {};
@@ -602,7 +647,7 @@ export default function SelectedCompany() {
           groupedCost = groupedCost.filter(r=>r.auxcode);
           groupedCost.push(...Object.values(mergedMap));
   
-          // ✅ Add ManPower rows (MONTHLY percentages — already monthly, no /12)
+          // Add ManPower rows (MONTHLY percentages)
           if ((!type || type === 'Cost') && splitPercentages[company]) {
             const mpMonths = monthlyMpByYear[year as number] ?? Array(12).fill(0);
   
@@ -642,10 +687,9 @@ export default function SelectedCompany() {
             }
           }
   
-          // ✅ injected EXTRA cost rows — MONTHLY (no /12 spread)
+          // injected EXTRA cost rows — MONTHLY
           if (!type || type === 'Cost') {
             if (company === 'West Walk Real Estate') {
-              // ASC → WWRE cost: add expense = -ASC monthly net
               const ascMonthlyNet = buildMonthlyNet('Assets Services Company', year as number);
               const balances = ascMonthlyNet.map(n => n);
               if (balances.some(v => v !== 0)) {
@@ -662,7 +706,6 @@ export default function SelectedCompany() {
               }
             }
             if (company === 'West Walk Advertisement') {
-              // WWA self zeroing: cost += -monthly net of WWA
               const wwaMonthlyNet = buildMonthlyNet('West Walk Advertisement', year as number);
               const balances = wwaMonthlyNet.map(n => -n);
               if (balances.some(v => v !== 0)) {
@@ -725,7 +768,6 @@ export default function SelectedCompany() {
     loadData();
   }, [company, type]);
   
-
 
   const renderHeader = () => (
     <View style={[styles.row, styles.header]}>
