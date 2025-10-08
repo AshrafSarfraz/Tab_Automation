@@ -120,8 +120,9 @@ export async function exportTrialBalanceToPDF(
   <h1>${title}</h1>
   <p class="meta">Generated on: ${new Date().toLocaleString()}</p>
   <table>
-    <thead>
-      <tr>
+    tr:first-child th {
+         background: #31368A;   /* dark background */
+          color: #fff;        /* white text */}
         <th class="col-type">Type</th>
         <th class="col-comp">Component</th>
         <th class="col-acct">Account</th>

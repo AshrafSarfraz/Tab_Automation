@@ -23,9 +23,8 @@ export default function LpoListScreen({navigation}) {
       <View style={styles.header}>
         <CustomHeader title="LPO list" />
         {/* <Text style={styles.heading}>{title} - LPO Details</Text> */}
-        <View style={{width: 50}} /> {/* Spacer for symmetry */}
       </View>
-
+         
       <FlatList
         data={lpos}
         keyExtractor={item => item['Lpo#'].toString()}
@@ -79,27 +78,29 @@ export default function LpoListScreen({navigation}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
     backgroundColor: Colors.Bg,
-    paddingTop: width > 600 ? 25 : 40,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
+    padding:20,
+    backgroundColor:Colors.PrimaryColor
   },
   heading: {
     fontSize: 24,
     fontWeight: 'bold',
-
     color: Colors.PrimaryColor,
   },
   card: {
     backgroundColor: Colors.White,
     padding: 16,
     borderRadius: 10,
-    marginBottom: 12,
+    marginHorizontal: 20,
+    marginTop:20,
+    borderWidth:0.2
+  
 
   },
   supplier: {

@@ -11,12 +11,13 @@ import LpoListScreen from '../screen/LPO/LPO_list';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WebViewScreen from '../screen/LPO/WebView';
 import CompanyLpo from '../screen/LPO/companies';
-import Westwalk from '../screen/RFP/Westwalk';
 
-import TrialBalance from '../screen/RFP/Westwalk/TrailBalanceList';
+
+
 import Ceo_Dashboard from '../screen/PerformanceReport/CmpDashboard/main_dashboard';
 import SelectedCompany from '../screen/PerformanceReport/CmpDashboard/SelectedCompany';
 import CmpDashboard from '../screen/PerformanceReport/CmpDashboard/companyDashboard';
+import Detect_Data from '../screen/PerformanceReport/Westwalk';
 
 
 
@@ -62,8 +63,8 @@ const StackNavigation = () => {
 
 
        
-        <Stack.Screen name="Westwalk" component={Westwalk} />
-        <Stack.Screen name="TrialBalanceList" component={TrialBalance} />
+        <Stack.Screen name="Westwalk" component={Detect_Data} />
+
 
 
        

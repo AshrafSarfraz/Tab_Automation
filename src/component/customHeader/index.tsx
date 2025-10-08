@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     marginRight: width>600?16:6,
   },
   title: {
-    fontSize: width>600?24:16,
+    fontSize: width>600?20:16,
     color:Colors.White,
     fontWeight: 'bold',
   },

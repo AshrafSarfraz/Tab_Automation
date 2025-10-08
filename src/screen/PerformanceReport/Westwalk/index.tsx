@@ -9,7 +9,7 @@ import { SyncResult, syncTrialBalance, TrialRow } from "../../../database/Utils/
 const { width } = Dimensions.get("window");
 const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-export default function TrialBalance() {
+export default function Detect_Data() {
   const [data, setData] = useState<TrialRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

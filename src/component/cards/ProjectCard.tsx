@@ -383,7 +383,7 @@ export default function Companies({ navigation }) {
             const ascNet = ascMoved[year] ?? 0;
             const wwaNet = wwaMoved[year] ?? 0;
   
-            r.totalCost += -ascNet;      // cost add (-asc)
+            r.totalCost += +ascNet;      // cost add (-asc)
             r.totalRevenue += wwaNet;    // revenue add (+wwa)
             r.netProfit = r.totalRevenue + r.totalCost;
             return r;

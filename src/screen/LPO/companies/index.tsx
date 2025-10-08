@@ -28,6 +28,7 @@ export default function CompanyLpo() {
        <CustomHeader title='Companies' />
       </View>
 
+     <View style={{padding:width>600?30:20}} >
       {/* Department List */}
       <FlatList
         data={departmentData}
@@ -51,6 +52,7 @@ export default function CompanyLpo() {
         contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
       />
+      </View>
     </View>
   );
 }
@@ -59,14 +61,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.Bg,
-    paddingHorizontal: 20,
-    paddingTop:width>600 ?25:50, 
+
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
+    padding:20,
+    backgroundColor:Colors.PrimaryColor
   },
   backText: {
     fontSize: 16,
@@ -79,16 +82,13 @@ const styles = StyleSheet.create({
     color: Colors.Black,
   },card: {
     backgroundColor: Colors.White,
-    borderRadius: 12,
+    borderRadius: 8,
     marginBottom: 14,
     paddingVertical: 18,
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
     borderLeftWidth: 6,
     borderLeftColor: Colors.PrimaryColor,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 4,
+    borderWidth:0.3
 
   },
   cardContent: {

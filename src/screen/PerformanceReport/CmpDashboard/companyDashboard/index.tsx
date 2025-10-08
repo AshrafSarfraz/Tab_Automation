@@ -1,16 +1,23 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import {
-  View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl,
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  RefreshControl,
+  Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getCompanyPnL, ManPowerSalaries } from '../../../../database/trailBalanceQueries';
+import {
+  getCompanyPnL,
+  ManPowerSalaries,
+} from '../../../../database/trailBalanceQueries';
 import CustomHeader from '../../../../component/customHeader';
-import { Colors } from '../../../../themes/color';
-
-
-
-// ...imports same...
-
+import {Colors} from '../../../../themes/color';
+ const {width}=Dimensions.get('window')
+ const isTablet = width > 600;
 interface PnLRow {
   company: string;
   year: number | string;
@@ -19,8 +26,8 @@ interface PnLRow {
   netProfit: number;
 }
 
-export default function CmpDashboard({ navigation, route }) {
-  const { company } = route.params;
+export default function CmpDashboard({navigation, route}) {
+  const {company} = route.params;
   const [data, setData] = useState<PnLRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,7 +37,10 @@ export default function CmpDashboard({ navigation, route }) {
   const saveSnapshot = async (rows: PnLRow[]) => {
     try {
       await AsyncStorage.removeItem(STORAGE_KEY);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ savedAt: Date.now(), rows }));
+      await AsyncStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({savedAt: Date.now(), rows}),
+      );
     } catch (e) {
       console.warn('Snapshot save failed', e);
     }
@@ -42,7 +52,6 @@ export default function CmpDashboard({ navigation, route }) {
     'Assets Services Company': 0.6851,
     'West Walk Advertisement': 0.0949,
   };
-
 
   const calcBaseRows = async (companyName: string) => {
     const allCompanies = await getCompanyPnL();
@@ -56,7 +65,10 @@ export default function CmpDashboard({ navigation, route }) {
     years.add('Overall');
 
     const pct = splitPercentages[companyName] ?? 0;
-    const byYear = new Map<number | string, { revenue: number; cost: number; net: number }>();
+    const byYear = new Map<
+      number | string,
+      {revenue: number; cost: number; net: number}
+    >();
 
     years.forEach(year => {
       const base = rowsForCompany.find(r => r.year === year);
@@ -66,7 +78,10 @@ export default function CmpDashboard({ navigation, route }) {
       // manpower share
       if (pct > 0) {
         if (year === 'Overall') {
-          const totalMPCost = manPowerRows.reduce((s, r) => s + (r.totalCost || 0), 0);
+          const totalMPCost = manPowerRows.reduce(
+            (s, r) => s + (r.totalCost || 0),
+            0,
+          );
           cost += totalMPCost * pct;
         } else {
           const mp = manPowerRows.find(r => r.year === year);
@@ -75,7 +90,7 @@ export default function CmpDashboard({ navigation, route }) {
       }
 
       const net = revenue + cost;
-      byYear.set(year, { revenue, cost, net });
+      byYear.set(year, {revenue, cost, net});
     });
 
     return byYear; // Map with 'Overall' and numeric years
@@ -104,7 +119,10 @@ export default function CmpDashboard({ navigation, route }) {
       const pct = splitPercentages[company] ?? 0;
       if (pct > 0) {
         if (year === 'Overall') {
-          const totalManPowerCost = manPowerRows.reduce((sum, r) => sum + (r.totalCost || 0), 0);
+          const totalManPowerCost = manPowerRows.reduce(
+            (sum, r) => sum + (r.totalCost || 0),
+            0,
+          );
           cost += totalManPowerCost * pct;
         } else {
           const mpRow = manPowerRows.find(r => r.year === year);
@@ -138,7 +156,8 @@ export default function CmpDashboard({ navigation, route }) {
         combined[i].totalRevenue += wwaNet;
 
         // recompute
-        combined[i].netProfit = combined[i].totalRevenue + combined[i].totalCost;
+        combined[i].netProfit =
+          combined[i].totalRevenue + combined[i].totalCost;
       }
     }
 
@@ -204,13 +223,19 @@ export default function CmpDashboard({ navigation, route }) {
   const overallData = data.filter(item => item.year === 'Overall');
   const yearWiseData = data.filter(item => item.year !== 'Overall');
 
-  const renderItem = ({ item }: { item: PnLRow }) => (
+  const renderItem = ({item}: {item: PnLRow}) => (
     <View style={styles.row}>
       <Text style={styles.cell}>{item.year}</Text>
-      <Text style={styles.cell}>{item.totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
-      <Text style={styles.cell}>{item.totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}</Text>
-      <Text style={[styles.cell, { color: item.netProfit >= 0 ? 'green' : 'red' }]}>
-        {item.netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+      <Text style={styles.cell}>
+        {item.totalRevenue.toLocaleString('en-US', {maximumFractionDigits: 0})}
+      </Text>
+      <Text style={styles.cell}>
+        {item.totalCost.toLocaleString('en-US', {maximumFractionDigits: 0})}
+      </Text>
+      
+      <Text    onPress={() => navigation.navigate('SelectedCompany', { company: item.company,  year: item.year})}
+        style={[styles.cell, {color: item.netProfit >= 0 ? 'green' : 'red',textDecorationLine:"underline"}]}>
+        {item.netProfit.toLocaleString('en-US', {maximumFractionDigits: 0})}
       </Text>
     </View>
   );
@@ -225,37 +250,61 @@ export default function CmpDashboard({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <CustomHeader title={company} />
-
+      <View style={{backgroundColor: Colors.PrimaryColor, padding: 20}}>
+        <CustomHeader title={company} />
+      </View>
+      <View style={{paddingHorizontal:width>600?40:20}} >
       <Text style={styles.title}>Summary Report</Text>
       <FlatList
         data={overallData}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        renderItem={({ item }) => (
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        renderItem={({item}) => (
           <View style={styles.Report_Cont}>
             <TouchableOpacity
-              style={styles.metricBox}
-              onPress={() => navigation.navigate('SelectedCompany', { company: item.company, type: 'Revenue' })}
-            >
+              style={[styles.metricBox, { width: isTablet ? '31%' : '100%' }]}
+              onPress={() =>
+                navigation.navigate('SelectedCompany', {
+                  company: item.company,
+                  type: 'Revenue',
+                })
+              }>
               <Text style={styles.metricLabel}>Revenue</Text>
-              <Text style={styles.metricValue}>{item.totalRevenue.toLocaleString()}</Text>
+              <Text style={styles.metricValue}>
+                {item.totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.metricBox}
-              onPress={() => navigation.navigate('SelectedCompany', { company: item.company, type: 'Cost' })}
-            >
+              style={[styles.metricBox, { width: isTablet ? '31%' : '100%' }]}
+              onPress={() =>
+                navigation.navigate('SelectedCompany', {
+                  company: item.company,
+                  type: 'Cost',
+                })
+              }>
               <Text style={styles.metricLabel}>Cost</Text>
-              <Text style={styles.metricValue}>{item.totalCost.toLocaleString()}</Text>
+              <Text style={styles.metricValue}>
+                {item.totalCost.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.metricBox}
-              onPress={() => navigation.navigate('SelectedCompany', { company: item.company, type: '' })}
-            >
+               style={[styles.metricBox, { width: isTablet ? '31%' : '100%' }]}
+              onPress={() =>
+                navigation.navigate('SelectedCompany', {
+                  company: item.company,
+                  type: '',
+                })
+              }>
               <Text style={styles.metricLabel}>Net Profit</Text>
-              <Text style={[styles.metricValue, { color: item.netProfit >= 0 ? 'green' : 'red' }]}>
-                {item.netProfit.toLocaleString()}
+              <Text
+                style={[
+                  styles.metricValue,
+                  {color: item.netProfit >= 0 ? 'green' : 'red'},
+                ]}>
+                {item.netProfit.toLocaleString('en-US', { maximumFractionDigits: 0 })}
               </Text>
             </TouchableOpacity>
           </View>
@@ -263,7 +312,7 @@ export default function CmpDashboard({ navigation, route }) {
         keyExtractor={(item, index) => item.company + index}
       />
 
-      <Text style={styles.title}>Yearly Report</Text>
+      <Text style={styles.Year_Txt}>Yearly Report</Text>
       <View style={[styles.row, styles.header]}>
         <Text style={styles.cell}>Year</Text>
         <Text style={styles.cell}>Revenue</Text>
@@ -272,33 +321,71 @@ export default function CmpDashboard({ navigation, route }) {
       </View>
       <FlatList
         data={yearWiseData}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         renderItem={renderItem}
         keyExtractor={(item, index) => item.company + String(item.year) + index}
       />
     </View>
+    </View>
   );
 }
 
-
-
-
-
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 30, paddingHorizontal: 24, backgroundColor: Colors.White },
-  Report_Cont: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
-  metricBox: {
-    flex: 1, borderRadius: 12, paddingVertical: 30, paddingHorizontal: 10, marginHorizontal: 4,
-    alignItems: 'center', backgroundColor: Colors.CardColor, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10,
+  container: {flex: 1, backgroundColor: Colors.White},
+  Report_Cont: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
   },
-  metricLabel: { fontSize: 14, color: '#000', marginBottom: 4, fontWeight: '600', textAlign: 'center' },
-  metricValue: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
-  row: { flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 0.5, borderColor: '#ccc' },
-  cell: { flex: 1, textAlign: 'center' },
-  header: { backgroundColor: '#eee', fontWeight: 'bold' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 18, fontWeight: 'bold', marginTop: 15, marginBottom: 5, color: Colors.PrimaryColor },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    marginTop:20,
+    color: Colors.Black,
+},
+  metricBox: {
+    height:130,
+    backgroundColor: '#f9f8f9',
+    borderRadius: 8,
+    padding:20,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 0.3,
+  },
+  metricLabel: {
+    fontSize: 16,
+    color: Colors.Black,
+    marginBottom: 16,
+    fontWeight:"bold",
+    alignSelf:"flex-start",
+    justifyContent:"flex-start"
+  },
+  metricValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  row: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    borderBottomWidth: 0.5,
+    borderColor: '#ccc',
+  },
+  cell: {flex: 1, textAlign: 'center'},
+  header: {backgroundColor: '#eee', fontWeight: 'bold'},
+  center: {flex: 1, justifyContent: 'center', alignItems: 'center'},
+
+  Year_Txt: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: Colors.Black,
+},
 });
+
 
 
 
