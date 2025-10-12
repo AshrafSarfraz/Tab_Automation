@@ -13,7 +13,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
 import {Colors} from '../../themes/color';
-import {fetchLpoList, getAuthToken} from "../../Api's";
+import {fetchLpoList, fetchRFPList, getAuthToken} from "../../Api's";
 import {syncTrialBalance} from '../../database/Utils/MapAndStoreData';
 
 const {width} = Dimensions.get('window');
@@ -23,6 +23,8 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [lpoList, setLpoList] = useState<any[]>([]);
+  const [RFPcount, setRFPcount] = useState(0);
+  const [RFPList, setRFPList] = useState<any[]>([]);
   const [token, setToken] = useState('');
   const [syncing, setSyncing] = useState(false);
 
@@ -46,6 +48,8 @@ export default function HomeScreen() {
       }
 
       const username = parsedUser?.username;
+      // const fkcmpseq = parsedUser?.fkcmpseq;
+      // const fkcmpseq = 15;
 
       // Get token
       const authToken = await getAuthToken(forceRefresh);
@@ -59,6 +63,14 @@ export default function HomeScreen() {
       const list = await fetchLpoList(username, authToken);
       setLpoList(list);
       setPendingCount(list.length);
+
+      //Get RFP List
+      const listRFP = await fetchRFPList("mufassir",15, authToken);
+      setRFPList(listRFP);
+      setRFPcount(listRFP.length);
+
+
+
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to fetch data.');
     } finally {
@@ -136,8 +148,8 @@ export default function HomeScreen() {
         <Text style={styles.cardTitle}>Performance Report</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.card} activeOpacity={0.85}>
-        <Text style={styles.cardTitle}>Request For Payment</Text>
+      <TouchableOpacity style={styles.card} activeOpacity={0.85}   onPress={() => navigation.navigate('RFPList', {RFPList})}> 
+        <Text style={styles.cardTitle}>Request For Payment  ( {RFPcount} )  </Text>
       </TouchableOpacity>
       </View>
     </ScrollView>

@@ -1,7 +1,7 @@
 
 // src/screens/ForgotPasswordScreen.tsx
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, Image } from 'react-native';
+import { View, TextInput, StyleSheet, Image, Alert } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import CustomButton from '../../../component/customButton';
 import { Colors } from '../../../themes/color';
@@ -14,10 +14,10 @@ export default function ForgotPasswordScreen({ navigation }) {
   const handleReset = async () => {
     try {
       await auth().sendPasswordResetEmail(email);
-      alert('Reset link sent to your email');
+      Alert.alert('Reset link sent to your email');
       navigation.goBack();
     } catch (error) {
-      alert(error.message);
+      Alert.alert(error.message);
     }
   };
 

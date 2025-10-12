@@ -89,7 +89,37 @@ export const fetchLpoList = async (username: string, token: string) => {
       return [];
     }
   };
+
+
+  // Fetch Lpo List
+export const fetchRFPList = async (username: string,fkcmpseq:number,  token: string) => {
+  try {
+    const res = await fetch(`${BASE_URL}/externalopenedpaymentpreperation/listofopenedpaymentpreperation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authentication: token,
+      },
+      body: JSON.stringify({ username,fkcmpseq }),
+    });
+
+    const data = await res.json();
+
+    if (!data || data.status === 'Unauthorized') {
+      await AsyncStorage.removeItem('authTokenData');
+      throw new Error('Session expired');
+    }
+
+    return data;
+  } catch (err) {
+    console.error('RFP API Error:', err);
+    return [];
+  }
+};
+
   
+
+
 
   
 

@@ -18,6 +18,7 @@ import Ceo_Dashboard from '../screen/PerformanceReport/CmpDashboard/main_dashboa
 import SelectedCompany from '../screen/PerformanceReport/CmpDashboard/SelectedCompany';
 import CmpDashboard from '../screen/PerformanceReport/CmpDashboard/companyDashboard';
 import Detect_Data from '../screen/PerformanceReport/Westwalk';
+import RFPListScreen from '../screen/RFP/RFP_List';
 
 
 
@@ -54,6 +55,7 @@ const StackNavigation = () => {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="companyLpo" component={CompanyLpo} />
         <Stack.Screen name="LpoList" component={LpoListScreen} />
+        <Stack.Screen name="RFPList" component={RFPListScreen} />
         <Stack.Screen name="WebView" component={WebViewScreen} />
 
       

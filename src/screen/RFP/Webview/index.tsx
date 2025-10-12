@@ -11,10 +11,7 @@ export default function WebViewScreen({ route }) {
 
   return (
     <View style={styles.container}>
-     <View style={styles.header}>
-        <CustomHeader title="Back" />
-        {/* <Text style={styles.heading}>{title} - LPO Details</Text> */}
-      </View>
+    <CustomHeader title='Back'  />
       <WebView
         source={{ uri: url }}
         style={{ flex: 1 }}
@@ -28,19 +25,10 @@ export default function WebViewScreen({ route }) {
 const styles = StyleSheet.create({
   container: { 
     flex: 1,
+    paddingTop:40,
+    paddingHorizontal:width>600?20:20,
     backgroundColor:Colors.White
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    padding:20,
-    backgroundColor:Colors.PrimaryColor
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.PrimaryColor,
+
+
   },
 });
