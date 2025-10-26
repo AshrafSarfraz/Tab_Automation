@@ -66,7 +66,7 @@ export default function LpoListScreen({navigation}) {
                 // Navigate to WebView
                 navigation.navigate('WebView', {url: finalUrl});
               }}>
-              <Text style={styles.buttonText}>Open LPO</Text>
+              <Text style={styles.buttonText}>Open Link</Text>
             </TouchableOpacity>
           </View>
         )}

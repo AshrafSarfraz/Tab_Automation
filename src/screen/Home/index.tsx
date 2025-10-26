@@ -25,15 +25,31 @@ export default function HomeScreen() {
   const [lpoList, setLpoList] = useState<any[]>([]);
   const [RFPcount, setRFPcount] = useState(0);
   const [RFPList, setRFPList] = useState<any[]>([]);
+  const [username,setUsername]=useState('')
   const [token, setToken] = useState('');
   const [syncing, setSyncing] = useState(false);
+
 
   useEffect(() => {
     // initial load with full-screen loader
     loadData(false, false);
+    autoSyncTrialBalance();  
   }, []);
 
-  // forceRefresh = token refresh
+  // background auto-sync on first load (no full-screen loader)
+  const autoSyncTrialBalance = async () => {
+    try {
+      setSyncing(true); // top-right button spinner dikhega
+      await syncTrialBalance(); // API -> map -> SQLite insert
+    } catch (e: any) {
+      // yahan silently log/alert kar sakte ho
+      console.log('Auto sync failed:', e?.message);
+      // Optional: Alert.alert('Warning', e?.message || 'Auto sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   // silent = true -> top-right button spinner use, screen loader na dikhaye
   const loadData = async (forceRefresh = false, silent = false) => {
     try {
@@ -41,14 +57,16 @@ export default function HomeScreen() {
 
       const userData = await AsyncStorage.getItem('user');
       const parsedUser = userData ? JSON.parse(userData) : null; // ✅ null-guard
-
+      
       if (!parsedUser) {
         Alert.alert('Error', 'User not found. Please log in again.');
         return;
       }
 
       const username = parsedUser?.username;
-      // const fkcmpseq = parsedUser?.fkcmpseq;
+      const fkcmpseq = parsedUser?.cmpseq;
+      setUsername(username)
+      
       // const fkcmpseq = 15;
 
       // Get token
@@ -65,7 +83,7 @@ export default function HomeScreen() {
       setPendingCount(list.length);
 
       //Get RFP List
-      const listRFP = await fetchRFPList("mufassir",15, authToken);
+      const listRFP = await fetchRFPList(username,fkcmpseq, authToken);
       setRFPList(listRFP);
       setRFPcount(listRFP.length);
 
@@ -117,7 +135,7 @@ export default function HomeScreen() {
           onPress={handleRefresh}
           disabled={syncing}>
           {syncing ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#31368a" />
           ) : (
             <Text style={styles.btnText}>Refresh</Text>
           )}
@@ -140,14 +158,16 @@ export default function HomeScreen() {
         </Text>
         {/* <Text style={styles.cardCount}> {pendingCount}</Text> */}
       </TouchableOpacity>
-
-      <TouchableOpacity
+       
+        {username==='MuhammedSh'?'':  <TouchableOpacity
         style={styles.card}
         activeOpacity={0.85}
         onPress={() => navigation.navigate('Ceo_Dashboard')}>
         <Text style={styles.cardTitle}>Performance Report</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>}
 
+     
+ 
       <TouchableOpacity style={styles.card} activeOpacity={0.85}   onPress={() => navigation.navigate('RFPList', {RFPList})}> 
         <Text style={styles.cardTitle}>Request For Payment  ( {RFPcount} )  </Text>
       </TouchableOpacity>

@@ -31,7 +31,7 @@ export default function RFPListScreen({navigation}) {
         showsVerticalScrollIndicator={false}
         renderItem={({item}) => (
           <View style={styles.card}>
-            <Text style={styles.supplier}>PPaSeq: {item.PPaSeq}</Text>
+            <Text style={styles.supplier}>Payment Preparation Sequence: {item.PPaSeq}</Text>
             <Text style={styles.detail}>Account Name: {item.AccountName}</Text>
             <Text style={styles.detail}>Description: {item.Description}</Text>
             <Text style={styles.detail}>
@@ -51,17 +51,20 @@ export default function RFPListScreen({navigation}) {
               style={styles.button}
               onPress={() => {
                 const url = item['HyperlinkPPaSeq'];
+                console.log('url',    url)
 
                 // Agar url already http/https se start nahi hota to usay prefix karo
                 let finalUrl = url;
-                if (!/^https?:\/\//i.test(url)) {
+                if (!/^http?:\/\//i.test(url)) {
                   finalUrl = `http://78.100.143.83:9507/${url}`; // apna domain prefix karo
                 }
+                console.log('final url',    finalUrl)
+
 
                 // Navigate to WebView
                 navigation.navigate('WebView', {url: finalUrl});
               }}>
-              <Text style={styles.buttonText}>Open LPO</Text>
+              <Text style={styles.buttonText}>Open Link</Text>
             </TouchableOpacity>
           </View>
         )}
