@@ -8,6 +8,7 @@ import { Colors } from '../../../themes/color';
 import Loader from '../../../component/indicator';
 import CustomButton from '../../../component/customButton';
 import { Logo_c } from '../../../themes/images';
+import { syncWestwalkMongoFromApi } from '../../../database/westwalkTrailBal';
 
 
 export default function LoginScreen({ navigation }) {
@@ -23,10 +24,14 @@ export default function LoginScreen({ navigation }) {
       const userDoc = await firestore().collection('users').doc(uid).get();
       if (userDoc.exists) {
         await AsyncStorage.setItem('user', JSON.stringify(userDoc.data()));
+      
         navigation.reset({
           index: 0,
           routes: [{ name: 'Home' }],
         });
+        syncWestwalkMongoFromApi().catch((e) =>
+          console.log("Sync failed but login continues:", e)
+        );
       } 
       else {
         Alert.alert('User record not found.');
@@ -47,9 +52,9 @@ export default function LoginScreen({ navigation }) {
       <TextInput placeholder="Password" secureTextEntry style={styles.input} onChangeText={setPassword} />
       <CustomButton title="Login" onPress={handleLogin} />
       {/* <CustomButton title="Forgot Password?" onPress={() => navigation.navigate('ForgotPassword')} /> */}
-      {/* <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+       <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
         <Text style={styles.signupText}>Don’t have an account? Sign up</Text>
-      </TouchableOpacity> */}
+      </TouchableOpacity> 
     </View>
   );
 }

@@ -19,6 +19,12 @@ import SelectedCompany from '../screen/PerformanceReport/CmpDashboard/SelectedCo
 import CmpDashboard from '../screen/PerformanceReport/CmpDashboard/companyDashboard';
 import Detect_Data from '../screen/PerformanceReport/Westwalk';
 import RFPListScreen from '../screen/RFP/RFP_List';
+import ReportSelection from '../screen/PerformanceReport/reportSelection';
+import mainDashboard from '../screen/PerformanceReport/mainDashboard';
+
+import TrialBalanceScreen from '../component/companyCard';
+import Home22 from '../screen/PerformanceReport/Hommme';
+import HomeRevenueChart from '../screen/PerformanceReport/Hommme';
 
 
 
@@ -49,6 +55,7 @@ const StackNavigation = () => {
     <NavigationContainer>
      <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
       {/* <Stack.Navigator initialRouteName={'Westwalk'} screenOptions={{ headerShown: false }}>  */}
+        
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
@@ -57,17 +64,21 @@ const StackNavigation = () => {
         <Stack.Screen name="LpoList" component={LpoListScreen} />
         <Stack.Screen name="RFPList" component={RFPListScreen} />
         <Stack.Screen name="WebView" component={WebViewScreen} />
+        <Stack.Screen name="ReportSelection" component={ReportSelection} />
+        <Stack.Screen name="mainDashboard" component={mainDashboard} />
 
-      
         <Stack.Screen name="Ceo_Dashboard" component={Ceo_Dashboard} />
         <Stack.Screen name="CmpDashboard" component={CmpDashboard} />
         <Stack.Screen name="SelectedCompany" component={SelectedCompany} />
-
-
+     
+        <Stack.Screen name="Home22" component={HomeRevenueChart} />
+       
        
         <Stack.Screen name="Westwalk" component={Detect_Data} />
+  
 
 
+    
 
        
       </Stack.Navigator>

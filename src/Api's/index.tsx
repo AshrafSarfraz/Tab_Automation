@@ -16,6 +16,9 @@ const westwalkAccounts = [
 
 
 
+
+
+
 // Authentication Key
 export const getAuthToken = async (forceRefresh = false) => {
   try {

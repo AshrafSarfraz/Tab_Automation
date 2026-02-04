@@ -26,25 +26,7 @@ const PnlCardModern = ({ navigation }) => {
     fetchPnL();
   }, []);
 
-  // useEffect(() => {
-  //   const fetchPnL = async () => {
-  //     const result = await getOverallPnL(); // your existing yearly/company data
-  //     const manPower = await ManPowerSalaries(); // get Man Power / Salaries cost
-  
-  //     const manPowerTotalCost = manPower.reduce((sum, d) => sum - d.totalCost, 0);
-  
-  //     if (result.length) {
-  //       const totalRevenue = result.reduce((sum, d) => sum + d.totalRevenue, 0); // subtract Man Power cost
-  //       const totalCost = result.reduce((sum, d) => sum + d.totalCost, 0) - manPowerTotalCost; // add Man Power cost
-  //       const netProfit = totalRevenue + totalCost; // recalc net profit
-  
-  //       setOverall({ year: 0, totalRevenue, totalCost, netProfit });
-  //       setData(result); // yearly data stays same
-  //     }
-  //   };
-  //   fetchPnL();
-  // }, []);
-  
+
 
   if (!overall) return null;
 

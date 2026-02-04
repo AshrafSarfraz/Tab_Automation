@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
     padding:20,
-    backgroundColor:Colors.PrimaryColor
+
   },
   heading: {
     fontSize: 24,

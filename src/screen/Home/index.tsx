@@ -1,3 +1,183 @@
+// import React, {useEffect, useState} from 'react';
+// import {
+//   View,
+//   Text,
+//   StyleSheet,
+//   TouchableOpacity,
+//   ActivityIndicator,
+//   Alert,
+//   ScrollView,
+//   Dimensions,
+//   StatusBar,
+// } from 'react-native';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+// import {useNavigation} from '@react-navigation/native';
+// import {Colors} from '../../themes/color';
+// import {fetchLpoList, fetchRFPList, getAuthToken} from "../../Api's";
+// import {syncTrialBalance} from '../../database/Utils/MapAndStoreData';
+
+// const {width} = Dimensions.get('window');
+
+// export default function HomeScreen() {
+//   const navigation = useNavigation();
+//   const [loading, setLoading] = useState(true);
+//   const [pendingCount, setPendingCount] = useState(0);
+//   const [lpoList, setLpoList] = useState<any[]>([]);
+//   const [RFPcount, setRFPcount] = useState(0);
+//   const [RFPList, setRFPList] = useState<any[]>([]);
+//   const [username,setUsername]=useState('')
+//   const [token, setToken] = useState('');
+//   const [syncing, setSyncing] = useState(false);
+
+
+//   useEffect(() => {
+//     // initial load with full-screen loader
+//     loadData(false, false);
+//     autoSyncTrialBalance();  
+//   }, []);
+
+//   // background auto-sync on first load (no full-screen loader)
+//   const autoSyncTrialBalance = async () => {
+//     try {
+//       setSyncing(true); // top-right button spinner dikhega
+//       await syncTrialBalance(); // API -> map -> SQLite insert
+//     } catch (e: any) {
+//       // yahan silently log/alert kar sakte ho
+//       console.log('Auto sync failed:', e?.message);
+//       // Optional: Alert.alert('Warning', e?.message || 'Auto sync failed');
+//     } finally {
+//       setSyncing(false);
+//     }
+//   };
+
+//   // silent = true -> top-right button spinner use, screen loader na dikhaye
+//   const loadData = async (forceRefresh = false, silent = false) => {
+//     try {
+//       if (!silent) setLoading(true);
+
+//       const userData = await AsyncStorage.getItem('user');
+//       const parsedUser = userData ? JSON.parse(userData) : null; // ✅ null-guard
+      
+//       if (!parsedUser) {
+//         Alert.alert('Error', 'User not found. Please log in again.');
+//         return;
+//       }
+
+//       const username = parsedUser?.username;
+//       const fkcmpseq = parsedUser?.cmpseq;
+//       setUsername(username)
+      
+//       // const fkcmpseq = 15;
+
+//       // Get token
+//       const authToken = await getAuthToken(forceRefresh);
+//       if (!authToken) {
+//         Alert.alert('Error', 'Failed to get auth token.');
+//         return;
+//       }
+//       setToken(authToken);
+
+//       // Get LPO list
+//       const list = await fetchLpoList(username, authToken);
+//       setLpoList(list);
+//       setPendingCount(list.length);
+
+//       //Get RFP List
+//       const listRFP = await fetchRFPList(username,fkcmpseq, authToken);
+//       setRFPList(listRFP);
+//       setRFPcount(listRFP.length);
+
+
+
+//     } catch (err: any) {
+//       Alert.alert('Error', err.message || 'Failed to fetch data.');
+//     } finally {
+//       if (!silent) setLoading(false);
+//     }
+//   };
+
+//   // 👇 yeh button ke liye combined handler hai
+  // const handleRefresh = async () => {
+  //   try {
+  //     setSyncing(true); // button spinner
+  //     await loadData(true, true); // token + lpo silently refresh
+  //     const res = await syncTrialBalance(); // API -> map -> SQLite insert
+  //   } catch (e: any) {
+  //     Alert.alert('Error', e?.message || 'Refresh failed');
+  //   } finally {
+  //     setSyncing(false);
+  //   }
+  // };
+
+//   const handleLogout = async () => {
+//     await AsyncStorage.removeItem('user');
+//     await AsyncStorage.removeItem('authTokenData');
+//     navigation.reset({index: 0, routes: [{name: 'Login'}]});
+//   };
+
+//   if (loading) {
+//     return (
+//       <View style={styles.centered}>
+//         <ActivityIndicator size="large" color={Colors.PrimaryColor} />
+//       </View>
+//     );
+//   }
+
+//   return (
+//     // <ScrollView
+//     //   contentContainerStyle={styles.container}
+//     //   showsVerticalScrollIndicator={false}>
+//     //   <StatusBar hidden={false} barStyle={'dark-content'} />
+
+//     //   <View style={styles.Header}>
+//     //     <TouchableOpacity
+//     //       style={styles.refreshBtn}
+//     //       onPress={handleRefresh}
+//     //       disabled={syncing}>
+//     //       {syncing ? (
+//     //         <ActivityIndicator color="#31368a" />
+//     //       ) : (
+//     //         <Text style={styles.btnText}>Refresh</Text>
+//     //       )}
+//     //     </TouchableOpacity>
+//     //     <Text style={styles.title}>Al-Wessil Holding</Text>
+//     //     <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+//     //       <Text style={[styles.btnText,{color:Colors.White}]}>Logout</Text>
+//     //     </TouchableOpacity>
+//     //   </View>
+
+
+//     //   <View  style={{padding:width>600?30:20}} >
+//     //   {/* Info Card */}
+//     //   <TouchableOpacity
+//     //     style={styles.card}
+//     //     activeOpacity={0.85}
+//     //     onPress={() => navigation.navigate('companyLpo', {lpoList})}>
+//     //     <Text style={styles.cardTitle}>
+//     //       Pending Approvals ( {pendingCount} )
+//     //     </Text>
+//     //     {/* <Text style={styles.cardCount}> {pendingCount}</Text> */}
+//     //   </TouchableOpacity>
+       
+//     //     <TouchableOpacity
+//     //     style={styles.card}
+//     //     activeOpacity={0.85}
+//     //     onPress={() => navigation.navigate('Ceo_Dashboard')}>
+//     //     <Text style={styles.cardTitle}>Performance Report</Text>
+//     //   </TouchableOpacity>
+
+     
+ 
+//     //   <TouchableOpacity style={styles.card} activeOpacity={0.85}   onPress={() => navigation.navigate('RFPList', {RFPList})}> 
+//     //     <Text style={styles.cardTitle}>Request For Payment  ( {RFPcount} )  </Text>
+//     //   </TouchableOpacity>
+//     //   </View>
+//     // </ScrollView>
+//   );
+// }
+
+
+
 import React, {useEffect, useState} from 'react';
 import {
   View,
@@ -6,15 +186,17 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  ScrollView,
-  Dimensions,
-  StatusBar,
+  Dimensions,Image
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
 import {Colors} from '../../themes/color';
 import {fetchLpoList, fetchRFPList, getAuthToken} from "../../Api's";
 import {syncTrialBalance} from '../../database/Utils/MapAndStoreData';
+import Container from '../../ui/useLayout';
+import MyText from '../../ui/AppText';
+import { homeLogo, LPO, Reports, RFP } from '../../themes/images';
+import ButtonCard from '../../component/cardBtn/buttonCard';
 
 const {width} = Dimensions.get('window');
 
@@ -124,107 +306,110 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}>
-      <StatusBar hidden={false} barStyle={'dark-content'} />
-
-      <View style={styles.Header}>
-        <TouchableOpacity
-          style={styles.refreshBtn}
-          onPress={handleRefresh}
-          disabled={syncing}>
-          {syncing ? (
-            <ActivityIndicator color="#31368a" />
-          ) : (
-            <Text style={styles.btnText}>Refresh</Text>
-          )}
-        </TouchableOpacity>
-        <Text style={styles.title}>Al-Wessil Holding</Text>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={[styles.btnText,{color:Colors.White}]}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-
-
-      <View  style={{padding:width>600?30:20}} >
-      {/* Info Card */}
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.85}
-        onPress={() => navigation.navigate('companyLpo', {lpoList})}>
-        <Text style={styles.cardTitle}>
-          Pending Approvals ( {pendingCount} )
-        </Text>
-        {/* <Text style={styles.cardCount}> {pendingCount}</Text> */}
+    <Container  statusBarColor={Colors.PrimaryColor}  statusBarStyle="light-content" >
+    <TouchableOpacity style={styles.RefreshBtn} onPress={handleRefresh}  >
+      <MyText type="btnTxt" >Refresh</MyText>
       </TouchableOpacity>
+
+      <TouchableOpacity style={styles.LogoutBtn}  onPress={handleLogout}  >
+      <MyText type="btnTxt" status="white" >Log out</MyText>
+      </TouchableOpacity>
+
+
+       <View  style={[styles.Container]} >
+      
+       <TouchableOpacity style={styles.Img_Cont}  >
+        <Image source={homeLogo} style={styles.HomeLogo}  />
+       </TouchableOpacity>
        
-        {username==='MuhammedSh'?'':  <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.85}
-        onPress={() => navigation.navigate('Ceo_Dashboard')}>
-        <Text style={styles.cardTitle}>Performance Report</Text>
-      </TouchableOpacity>}
-
-     
- 
-      <TouchableOpacity style={styles.card} activeOpacity={0.85}   onPress={() => navigation.navigate('RFPList', {RFPList})}> 
-        <Text style={styles.cardTitle}>Request For Payment  ( {RFPcount} )  </Text>
-      </TouchableOpacity>
+      
+       <View style={styles.Btn_Container} > 
+      <View style={{left:-30,marginBottom:5}} >
+       <ButtonCard
+        no="01"
+        title="Pending Approvals ( LPO )"
+        subtitle="Active"
+        caption="Create and manage Local Purchase Orders for approved procurement of goods and services."
+        icon={LPO}
+        Color="#038645"
+        onPress={() => navigation.navigate('companyLpo', {lpoList})}/>
+      
       </View>
-    </ScrollView>
+      <View>
+       <ButtonCard
+        no="02"
+        title="Finance Reports ( FR )"
+        subtitle="Active"
+        caption="View and generate financial and operational reports for monitoring and recordkeeping."
+        icon={Reports}
+        Color="#01a4c0"
+        onPress={() => navigation.navigate('ReportSelection')}/>
+    
+      </View>
+      <View style={{left:-30,marginTop:5}} >
+       <ButtonCard
+        no="03"
+        title="Request For Payment ( RFP )"
+        subtitle="Active"
+        caption="Payment requests for approved invoices, services, or project-related expenses."
+        icon={RFP}
+        Color="#4274b7"
+        onPress={() => navigation.navigate('RFPList', {RFPList})}
+      />  
+      </View>
+
+
+        </View>
+        </View>
+
+  </Container>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.Bg,
-    flexGrow: 1,
+const styles=StyleSheet.create({
+  Container:{
+    width:"100%",
+    flexDirection: "row",
+    height:"100%",
+    alignItems:"center",
   },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.Bg,
+  RefreshBtn:{
+    position:"absolute",
+    right:150,
+    top:30,
+    backgroundColor:"#ffffff",
+    height:40,
+    width:100,
+    borderRadius:30,
+    alignItems:"center",
+    justifyContent:"center",
+    borderWidth:0.2,
   },
-  Header: {
-    flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding:20,
-    backgroundColor:Colors.PrimaryColor
+  LogoutBtn:{
+    position:"absolute",
+    right:40,
+    top:30,
+    backgroundColor:"red",
+    height:40,
+    width:100,
+    borderRadius:30,
+    alignItems:"center",
+    justifyContent:"center",
   },
-  title: {
-    fontSize: width > 600 ? 28 : 18,
-    fontWeight: '700',
-    color: Colors.White,
-    textAlign: 'center',
-  },
-  refreshBtn: {
-    backgroundColor: Colors.White,
-    paddingVertical: width > 600 ? 10 : 6,
-    paddingHorizontal: width > 600 ? 24 : 8,
-    borderRadius: width > 600 ? 14 : 7,
-  },
-  logoutBtn: {
-    backgroundColor: '#d9534f',
-    paddingVertical: width > 600 ? 10 : 6,
-    paddingHorizontal: width > 600 ? 24 : 8,
-    borderRadius: width > 600 ? 14 : 7,
-  },
-  btnText: {color: '#31368A', fontSize: width > 600 ? 16 : 14, fontWeight: '600'},
-  card: {
-    backgroundColor: Colors.White,
-    height: 150,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 20,
-    marginTop: 10,
-    borderWidth:0.3
+  Img_Cont:{
+    width:"50%",
+    zIndex:1,
+
 
   },
-  cardTitle: {fontSize: 22, fontWeight: '600', color: Colors.Black},
-  // cardCount: { fontSize:40, fontWeight:'bold', color: Colors.PrimaryColor },
-});
+  HomeLogo:{
+    resizeMode:'contain',
+    width:"100%",
+    height:'100%'
+  },
+  Btn_Container:{
+   width:"50%",
+   left:-85
+  }
+
+})

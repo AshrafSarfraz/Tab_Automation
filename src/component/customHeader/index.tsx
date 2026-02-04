@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   icon:{
     height:width>600?30:24,
     width:width>600?30:24,
-    tintColor:Colors.White
+    tintColor:Colors.PrimaryColor
   },
 
   backButton: {
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: width>600?20:16,
-    color:Colors.White,
+    color:Colors.PrimaryColor,
     fontWeight: 'bold',
   },
 });
