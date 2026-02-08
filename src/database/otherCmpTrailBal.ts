@@ -1,45 +1,48 @@
 import { getDB } from "./db";
 
-const MONGO_API_URL = "https://financesystemawh-rtjt.onrender.com/api/trialbalance/mongo";
+const MONGO_API_URL =
+  "https://financesystemawh-rtjt.onrender.com/api/othercmp_trialbalance/mongo";
 
+// ✅ Use a separate table for OtherCmp so it doesn't overwrite Westwalk
+const TABLE_NAME = "othercmp_mongo";
 
 // 1️⃣ Create table (raw JSON store)
-export const createWestwalkMongoTable = async () => {
+export const createOtherCmpMongoTable = async () => {
   try {
     const db = await getDB();
     await db.executeSql(`
-      CREATE TABLE IF NOT EXISTS westwalk_mongo (
+      CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         payload TEXT,
         savedAt INTEGER
       );
     `);
-    console.log("✅ westwalk_mongo table created");
+    console.log(`✅ ${TABLE_NAME} table created`);
   } catch (err) {
     console.log("❌ Table creation error:", err);
   }
 };
 
 // 2️⃣ Save API response (RAW) into sqlite
-export const syncWestwalkMongoFromApi = async () => {
+export const syncOtherCmpMongoFromApi = async () => {
   try {
-    await createWestwalkMongoTable();
+    await createOtherCmpMongoTable();
 
-    console.log("🌐 Fetching Mongo API...");
+    console.log("🌐 Fetching OtherCmp Mongo API...");
     const res = await fetch(MONGO_API_URL);
     const json = await res.json(); // save exact response
 
     const db = await getDB();
 
-    // optional: keep only latest snapshot (clear old)
-    await db.executeSql(`DELETE FROM westwalk_mongo;`);
+    // keep only latest snapshot (clear old)
+    await db.executeSql(`DELETE FROM ${TABLE_NAME};`);
 
     await db.executeSql(
-      `INSERT INTO westwalk_mongo (payload, savedAt) VALUES (?, ?)`,
+      `INSERT INTO ${TABLE_NAME} (payload, savedAt) VALUES (?, ?)`,
       [JSON.stringify(json), Date.now()]
     );
 
-    console.log("✅ Saved Mongo payload to sqlite (westwalk_mongo)");
+    console.log(`✅ Saved OtherCmp payload to sqlite (${TABLE_NAME})`);
     return true;
   } catch (err) {
     console.log("❌ Sync error:", err);
@@ -48,17 +51,17 @@ export const syncWestwalkMongoFromApi = async () => {
 };
 
 // 3️⃣ Get latest saved payload from sqlite
-export const getWestwalkMongoFromSQLite = async () => {
+export const getOtherCmpMongoFromSQLite = async () => {
   try {
-    await createWestwalkMongoTable();
+    await createOtherCmpMongoTable();
 
     const db = await getDB();
-    const rows: any[] = [];
+    const rows = [];
 
-    await new Promise<void>((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       db.transaction((tx) => {
         tx.executeSql(
-          `SELECT * FROM westwalk_mongo ORDER BY id DESC LIMIT 1;`,
+          `SELECT * FROM ${TABLE_NAME} ORDER BY id DESC LIMIT 1;`,
           [],
           (_, res) => {
             for (let i = 0; i < res.rows.length; i++) {
@@ -87,13 +90,13 @@ export const getWestwalkMongoFromSQLite = async () => {
   }
 };
 
-
-export const clearWestwalkMongoTable = async () => {
+export const clearOtherCmpMongoTable = async () => {
   try {
+    await createOtherCmpMongoTable();
     const db = await getDB();
-    await db.executeSql(`DELETE FROM westwalk_mongo;`);
-    console.log('✅ westwalk_mongo cleared');
+    await db.executeSql(`DELETE FROM ${TABLE_NAME};`);
+    console.log(`✅ ${TABLE_NAME} cleared`);
   } catch (e) {
-    console.log('❌ Clear error:', e);
+    console.log("❌ Clear error:", e);
   }
 };

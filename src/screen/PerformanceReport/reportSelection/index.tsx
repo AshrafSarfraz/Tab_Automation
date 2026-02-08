@@ -1,12 +1,13 @@
 
 
 import React from "react";
-import { StyleSheet, View, useWindowDimensions,Image, TouchableOpacity, Linking, Alert } from "react-native";
+import { StyleSheet, View, useWindowDimensions,Image, TouchableOpacity, Linking, Alert, ImageBackground } from "react-native";
 import ButtonCard from "../../../component/cardBtn/buttonCard";
-import { homeLogo, LPO, Reports, RFP } from "../../../themes/images";
+import { Budget, Cashflow, homeLogo, Reports, RFP } from "../../../themes/images";
 import Container from "../../../ui/useLayout";
 import { Colors } from "../../../themes/color";
 import { useNavigation } from "@react-navigation/native";
+import CustomHeader from "../../../component/customHeader";
 
 
 
@@ -23,46 +24,56 @@ const ReportSelection = () => {
   
   return (
     <Container  statusBarColor={Colors.PrimaryColor}  statusBarStyle="light-content" >
-      {/* <TouchableOpacity style={styles.RefreshBtn} >
-        <MyText type="subHeader" >Refresh</MyText>
-        </TouchableOpacity> */}
+         <ImageBackground source={require('../../../assets/images/bg1.png')} style={{width:"100%",height:"100%"}} >
+           <CustomHeader title="" />
          <View  style={[styles.Container]} >
         
-         <TouchableOpacity style={styles.Img_Cont} onPress={handlePress} >
-          <Image source={homeLogo} style={styles.HomeLogo}  />
-         </TouchableOpacity>
+         <View style={styles.Img_Cont}>
+                    <ImageBackground
+                      source={homeLogo}
+                      style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}
+                      imageStyle={styles.HomeLogo}>
+                      <TouchableOpacity style={styles.bTN} onPress={handlePress} />
+                    </ImageBackground>
+                  </View>
         
          <View style={styles.Btn_Container} > 
-        <View style={{left:-35,marginBottom:10}} >
+       
+         <View style={{left:-35,marginBottom:10}} >
          <ButtonCard
-          no="01"
+          no=""
           title="Performance Report (PR)"
-          subtitle="Active"
-          caption="Create and manage Local Purchase Orders for approved procurement of goods and services."
-          icon={LPO}
-          Color="#038645"
-          onPress={() => navigation.navigate('mainDashboard')}/> 
-      
-        </View>
-        <View>
-         <ButtonCard
-          no="02"
-          title="Cashflow"
           subtitle="Active"
           caption="View and generate financial and operational reports for monitoring and recordkeeping."
           icon={Reports}
           Color="#01a4c0"
-          onPress={() => navigation.navigate('Ceo_Dashboard')}/>
-
+          onPress={() => navigation.navigate('mainDashboard')}/>
         </View>
+       
+       
+       
+        <View  >
+         <ButtonCard
+          no=""
+          title="Cashflow Report"
+          subtitle="Active"
+          caption="Create and manage Local Purchase Orders for approved procurement of goods and services."
+          icon={Cashflow}
+          Color="#31368A"
+           onPress={() => navigation.navigate('Ceo_Dashboard')}/> 
+      
+        </View>
+      
+   
+       
         <View style={{left:-35,marginTop:10}} >
          <ButtonCard
-          no="03"
+          no=""
           title="Budgted Amount "
           subtitle="Active"
           caption="Payment requests for approved invoices, services, or project-related expenses."
-          icon={RFP}
-          Color="#4274b7"
+          icon={Budget}
+          Color="#038645"
           onPress={() => console.log("clicked")}
         />  
         </View>
@@ -71,7 +82,8 @@ const ReportSelection = () => {
           </View>
           </View>
 
-    </Container>
+          </ImageBackground>
+          </Container>
   );
 };
 
@@ -81,8 +93,9 @@ const styles=StyleSheet.create({
   Container:{
     width:"100%",
     flexDirection: "row",
-    height:"100%",
+    height:"85%",
     alignItems:"center",
+    paddingLeft:30
   },
   RefreshBtn:{
     position:"absolute",
@@ -112,6 +125,13 @@ const styles=StyleSheet.create({
   Btn_Container:{
    width:"50%",
    left:-85
-  }
+  },
+  bTN: {
+    width: 300,
+    height: 300,
+    borderRadius: 200,
+    marginRight: 45,
+    marginTop: 10,
+  },
 
 })

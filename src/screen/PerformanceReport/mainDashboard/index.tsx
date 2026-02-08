@@ -1,50 +1,54 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState } from "react";
 import {
   StyleSheet,
   View,
   Animated,
   Pressable,
   Text,
-  Dimensions,
   TouchableOpacity,
   Image,
-} from 'react-native';
-import Container from '../../../ui/useLayout';
-import { Colors } from '../../../themes/color';
-import { Back } from '../../../themes/images';
+  ScrollView,
+  SafeAreaView,
+  StatusBar,
+  Alert,
+} from "react-native";
 
-import HomeRevenueChart from '../Hommme';
-import PnLSummaryCards from '../../../component/companyCard';
+import { Colors } from "../../../themes/color";
+import { Assets, Awh, Back, Retaj, Uranisu, WW,  WWA } from "../../../themes/images";
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
+import PnLSummaryCards from "../../../component/companyCard";
+import RevenueChart from "../../../component/Charts/RevenueCharts";
+import ExpenseChart from "../../../component/Charts/ExpenseChart";
+import NetProfitChart from "../../../component/Charts/NetProfitChart";
 
 const companies = [
-  { id: 1, name: 'Al Wessil Holding', logo: Back },
-  { id: 2, name: 'West Walk Real Estate', logo: Back },
-  { id: 3, name: 'West Walk Advertisement', logo: Back },
-  { id: 4, name: 'Assets Services Company', logo: Back },
-  { id: 5, name: 'MNO Ltd.', logo: Back },
-  { id: 6, name: 'PQR Co.', logo: Back },
+  { id: 1, name: "AL WESSIL HOLDING", logo: Awh },
+  { id: 2, name: "West Walk Real Estate", logo: WW },
+  { id: 3, name: "West Walk Advertisement", logo: WWA },
+  { id: 4, name: "Assets Services Company", logo: Assets },
+  { id: 5, name: "Uranus General Contracting Company WLL", logo: Uranisu },
+  { id: 6, name: "West Walk Hotel Management", logo: Retaj },
+  { id: 7, name: "Merchants Bridge Holdings Limited", logo: WWA },
+  
+
 ];
 
 const YEARS = [2023, 2024, 2025, 2026];
 
-const MainDashboard = ({navigation}) => {
+const MainDashboard = ({ navigation }: any) => {
   const MIN_WIDTH = 100;
   const MAX_WIDTH = 220;
 
-  // ✅ default company: West Walk Real Estate
   const defaultCompany =
-    companies.find((c) => c.name === 'West Walk Real Estate') || companies[0];
+    companies.find((c) => c.name === "AL WESSIL HOLDING") || companies[0];
 
   const [collapsed, setCollapsed] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<number>(defaultCompany.id);
-
-  // ✅ default year
-  const [selectedYear, setSelectedYear] = useState<number>(2025);
-
-  // ✅ custom dropdown open/close
+  const [selectedCompany, setSelectedCompany] = useState(defaultCompany.id);
+  const [selectedYear, setSelectedYear] = useState(2025);
   const [showYears, setShowYears] = useState(false);
+
+  // ✅ NEW: expand chart toggle
+  const [expandChart, setExpandChart] = useState(false);
 
   const sidebarAnim = useRef(new Animated.Value(MAX_WIDTH)).current;
 
@@ -58,74 +62,98 @@ const MainDashboard = ({navigation}) => {
     setCollapsed(!collapsed);
   };
 
-  const onCompanyPress = (company: any) => {
-    setSelectedCompany(company.id);
-  };
-
   const selectedCompanyObj = companies.find((c) => c.id === selectedCompany);
 
+  const onExpandPress = () => {
+    setExpandChart((p) => {
+      const next = !p;
+      // ✅ simple popup
+      return next;
+    });
+  };
+
+
+    const onViewDetailsPress = () => {
+         navigation.navigate("TrialBalanceTable", {
+        company:selectedCompanyObj?.name || "",
+        year: selectedYear
+      });
+    };
+  
+  
+
   return (
-    <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
+
       <View style={styles.Container}>
-        {/* LEFT SIDEBAR */}
+        {/* ================= LEFT SIDEBAR (FIXED) ================= */}
         <Animated.View style={[styles.LeftSide, { width: sidebarAnim }]}>
-          <View style={styles.LeftContainer}>
+          <View style={{ flex: 1 }}>
             <View style={styles.leftHeader}>
-              <TouchableOpacity style={styles.headerCont} onPress={()=>{navigation.goBack()}} >
+              <TouchableOpacity onPress={() => navigation.goBack()}>
                 <Image source={Back} style={styles.backIcon} />
               </TouchableOpacity>
 
               <Pressable onPress={toggleSidebar} style={styles.toggleBtn}>
-                <Text style={styles.toggleBtnIcon}>{collapsed ? '>>' : '<<'}</Text>
+                <Text style={styles.toggleBtnIcon}>
+                  {collapsed ? ">>" : "<<"}
+                </Text>
               </Pressable>
             </View>
 
             <View style={styles.sidebarContent}>
               {!collapsed && <Text style={styles.sidebarTitle}>Companies</Text>}
 
-              <View style={styles.CmpCont}>
-                {companies.map((c) => {
-                  const iconSize = collapsed ? 30 : 22;
-                  const isSelected = selectedCompany === c.id;
+              {companies.map((c) => {
+  const isSelected = selectedCompany === c.id;
+  const iconSize = collapsed ? 32 : 22; // ✅ collapse pe icon bigger
 
-                  return (
-                    <Pressable
-                      key={c.id}
-                      style={[
-                        styles.companyItem,
-                        { justifyContent: collapsed ? 'center' : 'flex-start' },
-                        isSelected && { backgroundColor: Colors.PrimaryColor },
-                      ]}
-                      onPress={() => onCompanyPress(c)}
-                    >
-                      <Image
-                        source={c.logo}
-                        style={{
-                          width: iconSize,
-                          height: iconSize,
-                          borderRadius: 6,
-                          tintColor: isSelected ? '#fff' : '#000',
-                        }}
-                      />
-                      {!collapsed && (
-                        <Text style={[styles.companyName, isSelected && { color: '#fff' }]}>
-                          {c.name}
-                        </Text>
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </View>
+  return (
+    <Pressable
+      key={c.id}
+      style={[
+        styles.companyItem,
+        // ✅ collapse pe center
+        collapsed
+          ? { justifyContent: "center", paddingHorizontal: 0 }
+          : { justifyContent: "flex-start" },
+
+        isSelected && { backgroundColor: Colors.PrimaryColor },
+      ]}
+      onPress={() => setSelectedCompany(c.id)}
+    >
+      <Image
+        source={c.logo}
+        style={[
+          styles.companyIcon,
+          {
+            width: iconSize,
+            height: iconSize,
+            tintColor: isSelected ? "#fff" : undefined
+          },
+        ]}
+      />
+
+      {!collapsed && (
+        <Text style={[styles.companyName, isSelected && { color: "#fff" }]}>
+          {c.name}
+        </Text>
+      )}
+    </Pressable>
+  );
+})}
+
             </View>
           </View>
         </Animated.View>
 
-        {/* RIGHT CONTENT */}
+        {/* ================= RIGHT SIDE ================= */}
         <View style={styles.RightSide}>
-          {/* ✅ overlay to close dropdown when tapping anywhere */}
-          <Pressable style={{ flex: 1 }} onPress={() => showYears && setShowYears(false)}>
-            {/* ✅ Custom Year Dropdown */}
-            <View style={styles.topBar}>
+          {/* Top Bar (FIXED) */}
+          <View style={styles.topBar}>
+            {/* Year (left side) */}
+            <View style={styles.yearWrap}>
               <Text style={styles.label}>Year:</Text>
 
               <Pressable
@@ -133,170 +161,270 @@ const MainDashboard = ({navigation}) => {
                 onPress={() => setShowYears((p) => !p)}
               >
                 <Text style={styles.yearText}>{selectedYear}</Text>
-                <Text style={styles.arrow}>{showYears ? '▲' : '▼'}</Text>
+                <Text>{showYears ? "▲" : "▼"}</Text>
               </Pressable>
             </View>
 
-            {/* ✅ Absolute Dropdown (won’t disturb below components) */}
-            {showYears && (
-              <View style={styles.dropdown}>
-                {YEARS.map((y) => (
-                  <Pressable
-                    key={y}
-                    style={styles.dropItem}
-                    onPress={() => {
-                      setSelectedYear(y);
-                      setShowYears(false);
-                    }}
+            {/* ✅ NEW buttons (right side) */}
+            <View style={styles.actionsWrap}>
+            <Pressable style={styles.actionBtn} onPress={onExpandPress}>
+              <Text style={styles.actionText}>
+              {expandChart ? "Collapse Chart" : "Expand Chart"}
+            </Text>
+           </Pressable>
+
+              <Pressable style={styles.actionBtn} onPress={onViewDetailsPress}>
+                <Text style={styles.actionText}>View Details</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Dropdown */}
+          {showYears && (
+            <View style={styles.dropdown}>
+              {YEARS.map((y) => (
+                <Pressable
+                  key={y}
+                  style={styles.dropItem}
+                  onPress={() => {
+                    setSelectedYear(y);
+                    setShowYears(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.dropText,
+                      y === selectedYear && {
+                        fontWeight: "800",
+                        color: Colors.PrimaryColor,
+                      },
+                    ]}
                   >
-                    <Text
-                      style={[
-                        styles.dropText,
-                        y === selectedYear && { fontWeight: '800', color: Colors.PrimaryColor },
-                      ]}
-                    >
-                      {y}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-             <View style={{ marginTop: 20, alignItems: 'center' }}>
-              <Text style={{ fontSize: 22, fontWeight: '700' }}>
-                {selectedCompanyObj?.name}
-              </Text>
-
-              <Text style={{ fontSize: 14, color: '#666', marginTop: 6 }}>
-                Showing data for year: {selectedYear}
-              </Text>
+                    {y}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
+          )}
 
-            {/* ✅ PnL Cards */}
+          {/* ========== SCROLL ONLY RIGHT CONTENT ========== */}
+          <ScrollView
+            style={styles.scrollArea}
+            contentContainerStyle={styles.scrollContent}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+            onScrollBeginDrag={() => setShowYears(false)}
+          >
             <View style={{ marginTop: 16 }}>
-              <PnLSummaryCards company={selectedCompanyObj?.name || ''} year={selectedYear} />
+              <PnLSummaryCards
+                company={selectedCompanyObj?.name || ""}
+                year={selectedYear}
+              />
             </View>
 
-            <View style={{ marginTop: 16 }}>
-              <HomeRevenueChart/>
+            {/* Charts */}
+            <View
+              style={[
+                styles.ChartContainer,
+                expandChart && styles.ChartContainerExpanded, // ✅ expands layout
+              ]}
+            >
+               <NetProfitChart
+                company={selectedCompanyObj?.name || ""}
+                year={selectedYear}
+                compareYear={selectedYear - 1}
+                expandChart={expandChart}
+                isSidebarCollapsed={collapsed}
+              />
+              <RevenueChart
+                company={selectedCompanyObj?.name || ""}
+                year={selectedYear}
+                compareYear={selectedYear - 1}
+                expandChart={expandChart}
+                isSidebarCollapsed={collapsed}
+              />
+
+              <ExpenseChart
+                company={selectedCompanyObj?.name || ""}
+                year={selectedYear}
+                compareYear={selectedYear - 1}
+                expandChart={expandChart}
+                isSidebarCollapsed={collapsed}
+              />
             </View>
+          </ScrollView>
 
-            
-
-          </Pressable>
+          {/* Overlay */}
+          {showYears && (
+            <Pressable style={styles.overlay} onPress={() => setShowYears(false)} />
+          )}
         </View>
       </View>
-    </Container>
+    </SafeAreaView>
   );
 };
 
 export default MainDashboard;
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.PrimaryColor,
+  },
+
   Container: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
+    backgroundColor: "#fff",
   },
+
+  /* LEFT */
   LeftSide: {
-    height: SCREEN_HEIGHT,
     paddingVertical: 20,
     borderRightWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#f9f9f9',
+    borderColor: "#ddd",
+    backgroundColor: "#f9f9f9",
   },
-  LeftContainer: {},
+
   leftHeader: {
-    flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 10,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderColor: '#ddd',
-    paddingHorizontal: 10,
-    alignItems: 'center',
+    borderColor: "#ddd",
+    alignItems: "center",
   },
-  headerCont: {},
-  backIcon: { width: 24, height: 24, tintColor: '#000' },
+
+  backIcon: { width: 24, height: 24, tintColor: "#000" },
+
   toggleBtn: {
     width: 30,
     height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: Colors.PrimaryColor,
     borderRadius: 6,
-    alignSelf: 'flex-end',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  toggleBtnIcon: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  sidebarContent: {
-    marginTop: 20,
-    height: SCREEN_HEIGHT * 0.7,
-    justifyContent: 'flex-start',
-    paddingHorizontal: 10,
-  },
-  sidebarTitle: { fontSize: 16, fontWeight: '700', marginBottom: 15, color: '#333' },
-  CmpCont: { flex: 1, justifyContent: 'flex-start' },
-  companyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    paddingVertical: 6,
-  },
-  companyName: { marginLeft: 10, fontSize: 14, fontWeight: '600', color: '#000' },
 
+  toggleBtnIcon: { color: "#fff", fontSize: 12, fontWeight: "bold" },
+
+  sidebarContent: { flex: 1, marginTop: 20, paddingHorizontal: 10 },
+
+  sidebarTitle: { fontSize: 16, fontWeight: "700", marginBottom: 15 },
+
+  companyItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+    padding: 8,
+    borderRadius: 8,
+
+  },
+
+  companyIcon: { width: 22, height: 22, borderRadius: 6 },
+
+  companyName: { marginLeft: 10, fontWeight: "600", fontSize:12},
+
+  /* RIGHT */
   RightSide: {
     flex: 1,
-    height: SCREEN_HEIGHT,
-    backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingTop: 20,
-    position: 'relative', // ✅ required for absolute dropdown
+    position: "relative",
   },
 
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    zIndex: 10,
     gap: 10,
-    zIndex: 2,
   },
-  label: { fontSize: 14, fontWeight: '700', color: '#222' },
+
+  yearWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  label: { fontWeight: "700" },
 
   yearBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: "#ddd",
     borderRadius: 8,
     paddingHorizontal: 12,
     height: 42,
-    backgroundColor: '#FAFAFA',
-    minWidth: 140,
-  },
-  yearText: { fontSize: 14, fontWeight: '600', color: '#222' },
-  arrow: { fontSize: 12, color: '#666' },
-
-  // ✅ ABSOLUTE dropdown so it doesn't push other content
-  dropdown: {
-    position: 'absolute',
-    top: 62,     // adjust if needed
-    left: 62,    // aligns under dropdown box
-    width: 140,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    borderRadius: 8,
-    backgroundColor: '#FFF',
-    elevation: 8,
-    zIndex: 9999,
-    overflow: 'hidden',
+    minWidth: 120,
   },
 
-  dropItem: {
-    paddingVertical: 10,
+  yearText: { fontWeight: "600" },
+
+  // ✅ Right side buttons
+  actionsWrap: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+
+  actionBtn: {
+    height: 36,
     paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: Colors.PrimaryColor,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  dropText: {
-    fontSize: 14,
-    color: '#222',
+
+  actionText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  dropdown: {
+    position: "absolute",
+    top: 62,
+    left: 62,
+    width: 140,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    zIndex: 9999,
+    elevation: 8,
+  },
+
+  dropItem: { padding: 12 },
+
+  dropText: { fontSize: 14 },
+
+  scrollArea: { flex: 1, marginTop: 10 },
+
+  scrollContent: { paddingBottom: 60 },
+
+  ChartContainer: {
+    marginTop: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+
+  // ✅ when expanded, show charts in single column
+  ChartContainerExpanded: {
+    flexDirection: "column",
+    flexWrap: "nowrap",
+  },
+
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
   },
 });

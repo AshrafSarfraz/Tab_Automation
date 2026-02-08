@@ -22,9 +22,10 @@ import RFPListScreen from '../screen/RFP/RFP_List';
 import ReportSelection from '../screen/PerformanceReport/reportSelection';
 import mainDashboard from '../screen/PerformanceReport/mainDashboard';
 
-import TrialBalanceScreen from '../component/companyCard';
-import Home22 from '../screen/PerformanceReport/Hommme';
-import HomeRevenueChart from '../screen/PerformanceReport/Hommme';
+
+import TrialBalanceTableScreen from '../screen/PerformanceReport/DetailsScreen';
+import SelectedCompany2 from '../screen/PerformanceReport/DetailsScreen';
+import Trial from '../screen';
 
 
 
@@ -70,9 +71,9 @@ const StackNavigation = () => {
         <Stack.Screen name="Ceo_Dashboard" component={Ceo_Dashboard} />
         <Stack.Screen name="CmpDashboard" component={CmpDashboard} />
         <Stack.Screen name="SelectedCompany" component={SelectedCompany} />
-     
-        <Stack.Screen name="Home22" component={HomeRevenueChart} />
-       
+        
+        <Stack.Screen name="TrialBalanceTable" component={TrialBalanceTableScreen} />
+        <Stack.Screen name="Trial" component={Trial} />
        
         <Stack.Screen name="Westwalk" component={Detect_Data} />
   
