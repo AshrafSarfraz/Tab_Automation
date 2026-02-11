@@ -13,13 +13,13 @@ import {
   Alert,
 } from "react-native";
 
-import { Colors } from "../../../themes/color";
-import { Assets, Awh, Back, Retaj, Uranisu, WW,  WWA } from "../../../themes/images";
+import { Colors } from "../../../../themes/color";
+import { Assets, Awh, Back, Retaj, Uranisu, WW,  WWA } from "../../../../themes/images";
 
-import PnLSummaryCards from "../../../component/companyCard";
-import RevenueChart from "../../../component/Charts/RevenueCharts";
-import ExpenseChart from "../../../component/Charts/ExpenseChart";
-import NetProfitChart from "../../../component/Charts/NetProfitChart";
+import BudgetExpenseChart from "../../../../component/budgetedChart/Charts/ExpenseChart";
+import RevenueBudgetChart from "../../../../component/budgetedChart/Charts/RevenueCharts";
+import NetProfitBudgetChart from "../../../../component/budgetedChart/Charts/NetProfitChart";
+import BudgetPnLSummaryCards from "../../../../component/companyCard/budgetedCard";
 
 const companies = [
   { id: 1, name: "AL WESSIL HOLDING", logo: Awh },
@@ -29,13 +29,11 @@ const companies = [
   { id: 5, name: "Uranus General Contracting Company WLL", logo: Uranisu },
   { id: 6, name: "West Walk Hotel Management", logo: Retaj },
   { id: 7, name: "Merchants Bridge Holdings Limited", logo: WWA },
-  
-
 ];
 
 const YEARS = [2023, 2024, 2025, 2026];
 
-const MainDashboard = ({ navigation }: any) => {
+const BudgtedDashboard = ({ navigation }: any) => {
   const MIN_WIDTH = 100;
   const MAX_WIDTH = 220;
 
@@ -76,7 +74,8 @@ const MainDashboard = ({ navigation }: any) => {
     const onViewDetailsPress = () => {
          navigation.navigate("TrialBalanceTable", {
         company:selectedCompanyObj?.name || "",
-        year: selectedYear
+        year: selectedYear,
+        mode: "budget",     
       });
     };
   
@@ -155,7 +154,7 @@ const MainDashboard = ({ navigation }: any) => {
             {/* Year (left side) */}
             <View style={styles.yearWrap}>
               <Text style={styles.label}>Year:</Text>
-
+ 
               <Pressable
                 style={styles.yearBox}
                 onPress={() => setShowYears((p) => !p)}
@@ -167,6 +166,9 @@ const MainDashboard = ({ navigation }: any) => {
 
             {/* ✅ NEW buttons (right side) */}
             <View style={styles.actionsWrap}>
+            <Pressable style={[styles.actionBtn,{backgroundColor:"#fff", borderColor:Colors.PrimaryColor, borderWidth:2,}]} onPress={()=>{navigation.navigate('Csvupload')}}>
+                <Text style={[styles.actionText,{color:Colors.PrimaryColor}]}>Add Budget</Text>
+              </Pressable>
             <Pressable style={styles.actionBtn} onPress={onExpandPress}>
               <Text style={styles.actionText}>
               {expandChart ? "Collapse Chart" : "Expand Chart"}
@@ -216,7 +218,7 @@ const MainDashboard = ({ navigation }: any) => {
             onScrollBeginDrag={() => setShowYears(false)}
           >
             <View style={{ marginTop: 16 }}>
-              <PnLSummaryCards
+              <BudgetPnLSummaryCards
                 company={selectedCompanyObj?.name || ""}
                 year={selectedYear}
               />
@@ -229,28 +231,32 @@ const MainDashboard = ({ navigation }: any) => {
                 expandChart && styles.ChartContainerExpanded, // ✅ expands layout
               ]}
             >
-               <NetProfitChart
+               <NetProfitBudgetChart
                 company={selectedCompanyObj?.name || ""}
                 year={selectedYear}
-                compareYear={selectedYear - 1}
                 expandChart={expandChart}
                 isSidebarCollapsed={collapsed}
               />
-              <RevenueChart
+              <RevenueBudgetChart
                 company={selectedCompanyObj?.name || ""}
                 year={selectedYear}
-                compareYear={selectedYear - 1}
                 expandChart={expandChart}
                 isSidebarCollapsed={collapsed}
               />
 
-              <ExpenseChart
+              <BudgetExpenseChart
                 company={selectedCompanyObj?.name || ""}
                 year={selectedYear}
-                compareYear={selectedYear - 1}
                 expandChart={expandChart}
                 isSidebarCollapsed={collapsed}
               />
+              {/* <RevenueCostNetProfitLineChart 
+               company={selectedCompanyObj?.name || ""}
+               year={selectedYear}
+               expandChart={expandChart}
+               isSidebarCollapsed={collapsed}
+              
+              /> */}
             </View>
           </ScrollView>
 
@@ -264,7 +270,7 @@ const MainDashboard = ({ navigation }: any) => {
   );
 };
 
-export default MainDashboard;
+export default BudgtedDashboard;
 
 const styles = StyleSheet.create({
   safeArea: {

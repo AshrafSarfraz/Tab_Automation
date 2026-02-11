@@ -15,10 +15,6 @@ const westwalkAccounts = [
 
 
 
-
-
-
-
 // Authentication Key
 export const getAuthToken = async (forceRefresh = false) => {
   try {
@@ -66,7 +62,6 @@ export const getAuthToken = async (forceRefresh = false) => {
 };
 
 
-
 // Fetch Lpo List
 export const fetchLpoList = async (username: string, token: string) => {
     try {
@@ -92,7 +87,6 @@ export const fetchLpoList = async (username: string, token: string) => {
       return [];
     }
   };
-
 
   // Fetch Lpo List
 export const fetchRFPList = async (username: string,fkcmpseq:number,  token: string) => {
@@ -121,11 +115,6 @@ export const fetchRFPList = async (username: string,fkcmpseq:number,  token: str
 };
 
   
-
-
-
-  
-
 
   // Fetch RFP of Westwalk
   export const fetchTrialBalanceApi = async (token: string) => {

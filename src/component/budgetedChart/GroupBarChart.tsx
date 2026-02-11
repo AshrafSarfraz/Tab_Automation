@@ -30,9 +30,7 @@ type Props = {
   showYAxis?: boolean;
   yTicks?: number;
   yAxisFormatter?: (v: number) => string;
-
-  // ✅ now you can pass from outside
-  yAxisOffset?: number; // -ve => up, +ve => down
+  yAxisOffset?: number;
 };
 
 const X_LABEL_SPACE = 26;
@@ -44,7 +42,7 @@ const defaultAxisFormatter = (v: number) => {
   return `${v}`;
 };
 
-export default function GroupedBarChart({
+export default function GroupedBarChart2({
   data,
   series,
   height = 200,
@@ -78,34 +76,28 @@ export default function GroupedBarChart({
 
   const barAreaHeight = Math.max(1, height - X_LABEL_SPACE);
 
-  // ✅ ticks
   const yValues = useMemo(() => {
     const steps = Math.max(1, yTicks);
     const out: number[] = [];
-    for (let i = 0; i <= steps; i++) {
-      out.push((computedMax / steps) * i);
-    }
-    return out; // bottom->top
+    for (let i = 0; i <= steps; i++) out.push((computedMax / steps) * i);
+    return out;
   }, [computedMax, yTicks]);
 
-  // ✅ FIX: each month/group must have SAME width for bars + label
   const groupBarsWidth =
     series.length * barWidth + (series.length - 1) * barGap;
 
-  const groupWidth = groupBarsWidth; // (optional: + 2/4 padding if you want)
+  // ✅ FIX: label ko fit karne ke liye minimum width
+  const MIN_GROUP_WIDTH = 32; // Jan/Feb/Mar easily fit
+  const groupWidth = Math.max(groupBarsWidth, MIN_GROUP_WIDTH);
 
   return (
     <View style={styles.card}>
       <View style={styles.mainRow}>
-        {/* ✅ Y AXIS */}
         {showYAxis && (
           <View
             style={[
               styles.yAxis,
-              {
-                height: barAreaHeight,
-                transform: [{ translateY: yAxisOffset }],
-              },
+              { height: barAreaHeight, transform: [{ translateY: yAxisOffset }] },
             ]}
           >
             {yValues
@@ -122,9 +114,7 @@ export default function GroupedBarChart({
           </View>
         )}
 
-        {/* ✅ CHART */}
         <View style={[styles.chartArea, { height }]}>
-          {/* Grid lines */}
           {showYAxis &&
             yValues
               .slice()
@@ -134,27 +124,20 @@ export default function GroupedBarChart({
                   key={`grid-${i}`}
                   style={[
                     styles.gridLine,
-                    {
-                      bottom: X_LABEL_SPACE + (barAreaHeight / yTicks) * i,
-                    },
+                    { bottom: X_LABEL_SPACE + (barAreaHeight / yTicks) * i },
                   ]}
                 />
               ))}
 
-          {/* Bars + Label GROUPS */}
           <View style={styles.row}>
             {data.map((row, idx) => (
               <View
                 key={`${row.label}-${idx}`}
                 style={[
                   styles.group,
-                  {
-                    width: groupWidth, // ✅ fixed width
-                    marginRight: idx === data.length - 1 ? 0 : groupGap,
-                  },
+                  { width: groupWidth, marginRight: idx === data.length - 1 ? 0 : groupGap },
                 ]}
               >
-                {/* Bars */}
                 <View style={[styles.groupBars, { height: barAreaHeight }]}>
                   {series.map((s, si) => {
                     const value = Number(row[s.key] ?? 0);
@@ -164,9 +147,7 @@ export default function GroupedBarChart({
                     return (
                       <View key={`${s.key}-${si}`} style={styles.barWrap}>
                         {showValuesOnTop && (
-                          <Text style={styles.valueText}>
-                            {valueFormatter(safeValue)}
-                          </Text>
+                          <Text style={styles.valueText}>{valueFormatter(safeValue)}</Text>
                         )}
 
                         <View
@@ -180,19 +161,18 @@ export default function GroupedBarChart({
                           ]}
                         />
 
-                        {si !== series.length - 1 && (
-                          <View style={{ width: barGap }} />
-                        )}
+                        {si !== series.length - 1 && <View style={{ width: barGap }} />}
                       </View>
                     );
                   })}
                 </View>
 
-                {/* X Label */}
+                {/* ✅ FIX: truncate off, show full month */}
                 <View style={[styles.xLabelRow, { height: X_LABEL_SPACE }]}>
                   <Text
-                    numberOfLines={1}
                     style={[styles.xLabel, labelStyle]}
+                    numberOfLines={1}
+                    ellipsizeMode="clip"
                   >
                     {row.label}
                   </Text>
@@ -201,7 +181,6 @@ export default function GroupedBarChart({
             ))}
           </View>
 
-          {/* baseline */}
           <View style={[styles.baseline, { bottom: X_LABEL_SPACE }]} />
         </View>
       </View>
@@ -232,31 +211,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 5,
     borderWidth: 0.2,
-    paddingTop:40,
-  
-  
+    paddingTop: 40,
   },
-
   mainRow: { flexDirection: "row", alignItems: "flex-end" },
 
-  yAxis: {
-    width: 20,
-    marginRight: 10,
-    justifyContent: "space-between",
-
-  },
+  yAxis: { width: 20, marginRight: 10, justifyContent: "space-between" },
   yTickRow: { justifyContent: "center" },
-  yTickText: {
-    fontSize: 8,
-    opacity: 0.7,
-    textAlign: "right",
-  },
+  yTickText: { fontSize: 8, opacity: 0.7, textAlign: "right" },
 
-  chartArea: {
-    flex: 1,
-    justifyContent: "flex-end",
-    position: "relative",
-  },
+  chartArea: { flex: 1, justifyContent: "flex-end", position: "relative" },
 
   gridLine: {
     position: "absolute",
@@ -268,7 +231,6 @@ const styles = StyleSheet.create({
   },
 
   row: { flexDirection: "row", alignItems: "flex-end" },
-
   group: { alignItems: "center" },
 
   groupBars: {
@@ -280,18 +242,10 @@ const styles = StyleSheet.create({
   barWrap: { flexDirection: "row", alignItems: "flex-end" },
   bar: { borderTopLeftRadius: 4, borderTopRightRadius: 4 },
 
-  valueText: {
-    position: "absolute",
-    top: -20,
-    fontSize: 8,
-    opacity: 0.7,
-  },
+  valueText: { position: "absolute", top: -20, fontSize: 8, opacity: 0.7 },
 
-  xLabelRow: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  xLabel: { fontSize: 11, opacity: 0.7 },
+  xLabelRow: { justifyContent: "center", alignItems: "center" },
+  xLabel: { fontSize: 9, opacity: 0.7 }, // ✅ little bigger
 
   baseline: {
     position: "absolute",
@@ -312,4 +266,3 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 12 },
 });
-

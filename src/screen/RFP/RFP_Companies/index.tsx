@@ -1,13 +1,6 @@
-// src/screens/DepartmentsScreen.tsx
+// src/screens/RfpCompaniesScreen.tsx
 import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  FlatList,
-  Dimensions,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Dimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import _ from 'lodash';
 import { Colors } from '../../../themes/color';
@@ -22,35 +15,35 @@ const GAP = width > 600 ? 18 : 12;
 const CARD_WIDTH =
   (width - SIDE_PADDING * 2 - GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
-export default function CompanyLpo() {
+export default function RfpCompaniesScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
-  const lpoList = route?.params?.lpoList ?? [];
+  const RFPList = route?.params?.RFPList ?? [];
 
-  const departmentData = useMemo(() => {
-    const grouped = _.groupBy(lpoList, (item: any) => item.Company || 'Unassigned');
-    return Object.entries(grouped).map(([department, items]: any) => ({
-      department,
+  const companyData = useMemo(() => {
+    const grouped = _.groupBy(RFPList, (item: any) => item.CompanyName || 'Unassigned');
+    return Object.entries(grouped).map(([company, items]: any) => ({
+      company,
       count: items.length,
       items,
     }));
-  }, [lpoList]);
+  }, [RFPList]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <CustomHeader title="Companies" />
+        <CustomHeader title="RFP Companies" />
       </View>
 
       <FlatList
-        data={departmentData}
+        data={companyData}
         numColumns={NUM_COLUMNS}
-        keyExtractor={(item) => item.department}
+        keyExtractor={(item) => item.company}
         contentContainerStyle={{
           paddingHorizontal: SIDE_PADDING,
-          paddingBottom: 24,
           paddingTop: 18,
+          paddingBottom: 24,
         }}
         columnWrapperStyle={{
           justifyContent: 'space-between',
@@ -61,29 +54,26 @@ export default function CompanyLpo() {
           <View style={styles.itemContainer}>
             <TouchableOpacity
               activeOpacity={0.9}
+              style={styles.card}
               onPress={() =>
-                navigation.navigate('LpoList', {
-                  title: item.department,
-                  lpos: item.items,
+                navigation.navigate('RfpListByCompany', {
+                  title: item.company,
+                  RFPList: item.items,
                 })
               }
-              style={styles.card}
             >
-              {/* Top Accent */}
               <View style={styles.accentBar} />
 
-              {/* Main Content */}
               <View style={styles.cardBody}>
-                <Text style={styles.department} numberOfLines={2}>
-                  {item.department}
+                <Text style={styles.companyName} numberOfLines={2}>
+                  {item.company}
                 </Text>
 
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{item.count} Pending</Text>
+                  <Text style={styles.badgeText}>{item.count} Approvals</Text>
                 </View>
               </View>
 
-              {/* Small cute corner dot */}
               <View style={styles.cornerDot} />
             </TouchableOpacity>
           </View>
@@ -94,41 +84,23 @@ export default function CompanyLpo() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.Bg,
-    justifyContent:"center"
-  },
+  container: { flex: 1, backgroundColor: Colors.Bg },
 
-  header: {
-    borderBottomWidth: 0.4,
-    paddingBottom: 18,
-  },
+  header: { borderBottomWidth: 0.4, paddingBottom: 18 },
 
-  itemContainer: {
-    width: CARD_WIDTH,
-    alignSelf:"center"
-    
-  },
+  itemContainer: { width: CARD_WIDTH },
 
   card: {
     height: 160,
     borderRadius: 16,
     backgroundColor: Colors.White,
-
-    // subtle border
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.06)',
-
-    // shadow (iOS)
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
     shadowRadius: 14,
-
-    // shadow (Android)
     elevation: 4,
-
     overflow: 'hidden',
     position: 'relative',
   },
@@ -148,13 +120,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 
-  department: {
+  companyName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.Black,
     textAlign: 'center',
     lineHeight: 20,
-    marginTop: 2,
   },
 
   badge: {
@@ -167,8 +138,8 @@ const styles = StyleSheet.create({
   },
 
   badgeText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: Colors.PrimaryColor,
   },
 

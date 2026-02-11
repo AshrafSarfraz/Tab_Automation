@@ -14,18 +14,23 @@ import CompanyLpo from '../screen/LPO/companies';
 
 
 
-import Ceo_Dashboard from '../screen/PerformanceReport/CmpDashboard/main_dashboard';
-import SelectedCompany from '../screen/PerformanceReport/CmpDashboard/SelectedCompany';
-import CmpDashboard from '../screen/PerformanceReport/CmpDashboard/companyDashboard';
-import Detect_Data from '../screen/PerformanceReport/Westwalk';
+// import Ceo_Dashboard from '../screen/Reports/CmpDashboard/main_dashboard';
+// import SelectedCompany from '../screen/Reports/CmpDashboard/SelectedCompany';
+// import CmpDashboard from '../screen/Reports/CmpDashboard/companyDashboard';
+// import Detect_Data from '../screen/Reports/Westwalk';
 import RFPListScreen from '../screen/RFP/RFP_List';
-import ReportSelection from '../screen/PerformanceReport/reportSelection';
-import mainDashboard from '../screen/PerformanceReport/mainDashboard';
+import ReportSelection from '../screen/Reports/reportSelection';
+import mainDashboard from '../screen/Reports/Performance_Report/mainDashboard';
 
 
-import TrialBalanceTableScreen from '../screen/PerformanceReport/DetailsScreen';
-import SelectedCompany2 from '../screen/PerformanceReport/DetailsScreen';
+
+
 import Trial from '../screen';
+import TrialBalanceTableScreen from '../screen/Reports/Performance_Report/DetailsScreen';
+import CsvUploadScreen from '../screen/Reports/budgted/uploadData';
+import BudgtedDashboard from '../screen/Reports/budgted/budgetedDashboard';
+import RfpCompaniesScreen from '../screen/RFP/RFP_Companies';
+import RfpListByCompany from '../screen/RFP/RFP_List';
 
 
 
@@ -63,19 +68,26 @@ const StackNavigation = () => {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="companyLpo" component={CompanyLpo} />
         <Stack.Screen name="LpoList" component={LpoListScreen} />
-        <Stack.Screen name="RFPList" component={RFPListScreen} />
+        <Stack.Screen name="RfpCompanies" component={RfpCompaniesScreen} />
+        <Stack.Screen name="RfpListByCompany" component={RfpListByCompany} />
         <Stack.Screen name="WebView" component={WebViewScreen} />
         <Stack.Screen name="ReportSelection" component={ReportSelection} />
+      
         <Stack.Screen name="mainDashboard" component={mainDashboard} />
-
-        <Stack.Screen name="Ceo_Dashboard" component={Ceo_Dashboard} />
-        <Stack.Screen name="CmpDashboard" component={CmpDashboard} />
-        <Stack.Screen name="SelectedCompany" component={SelectedCompany} />
-        
         <Stack.Screen name="TrialBalanceTable" component={TrialBalanceTableScreen} />
+
+        <Stack.Screen name="BudgtedDashboard" component={BudgtedDashboard} />
+        <Stack.Screen name="BudgtedTrialBalanceTable" component={TrialBalanceTableScreen} />
+        <Stack.Screen name="Csvupload" component={CsvUploadScreen} />
+
+        {/* <Stack.Screen name="Ceo_Dashboard" component={Ceo_Dashboard} />
+        <Stack.Screen name="CmpDashboard" component={CmpDashboard} />
+        <Stack.Screen name="SelectedCompany" component={SelectedCompany} /> */}
+        
+     
         <Stack.Screen name="Trial" component={Trial} />
        
-        <Stack.Screen name="Westwalk" component={Detect_Data} />
+  
   
 
 

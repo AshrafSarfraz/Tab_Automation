@@ -25,7 +25,7 @@ const ReportSelection = () => {
   return (
     <Container  statusBarColor={Colors.PrimaryColor}  statusBarStyle="light-content" >
          <ImageBackground source={require('../../../assets/images/bg1.png')} style={{width:"100%",height:"100%"}} >
-           <CustomHeader title="" />
+           <CustomHeader title="Back" />
          <View  style={[styles.Container]} >
         
          <View style={styles.Img_Cont}>
@@ -74,10 +74,10 @@ const ReportSelection = () => {
           caption="Payment requests for approved invoices, services, or project-related expenses."
           icon={Budget}
           Color="#038645"
-          onPress={() => console.log("clicked")}
-        />  
+          onPress={() => navigation.navigate('BudgtedDashboard')}/> 
+       
         </View>
-
+       
 
           </View>
           </View>
