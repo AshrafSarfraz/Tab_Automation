@@ -42,6 +42,11 @@ const PREV_W  = 120; // previous year total (P)
 const BUDGET_TOTAL_W = 120; // budget total (B)
 const MONTH_W = 100;
 
+// ✅ CLUB ACCOUNTS (FIX)
+const CLUB_ACCOUNTS = new Set(["44104", "44107", "44122", "44124", "44125"]);
+const CLUB_ACCOUNTS_LABEL = "Tenant Variation Request";
+const CLUB_ACCOUNTS_ACCOUNT = "44104,44107,44122,44124,44125";
+
 // ======================= API/DB TYPES =======================
 type ApiRow = {
   accountno?: string;
@@ -98,9 +103,6 @@ type RowItem = TrialBalanceRow & {
 const isValidMonth = (m?: number | null) => typeof m === "number" && m >= 1 && m <= 12;
 const sumArr = (arr: number[]) => arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
 
-const buildMatchKey = (t: string, acc: string, code: string) =>
-  `${(t || "").toLowerCase()}||${acc || ""}||${code || ""}`;
-
 const normalize = (r: ApiRow): TrialBalanceRow => {
   const type = String(r.accountType || "").trim();
   return {
@@ -111,6 +113,7 @@ const normalize = (r: ApiRow): TrialBalanceRow => {
     month: Number(r.month || 0),
     accountno: String(r.accountno || "").trim(),
     auxcode: String(r.auxcode || "").trim(),
+    // ✅ be tolerant: some rows store cc3 vs cc3code
     cc3code: String(r.cc3 || r.cc3code || "").trim(),
     balanceFirst: Number(r.balanceFirst || 0),
     budgetedAmount: Number(r.budgetedAmount || 0),
@@ -262,7 +265,20 @@ export default function TrialBalanceTableScreen() {
           : await getOtherCmpMongoFromSQLite();
 
         const rawRows = extractRowsFromSnap(snap);
-        const all = rawRows.map(normalize);
+
+        // ✅ normalize
+        let all = rawRows.map(normalize);
+
+        // ✅ IMPORTANT FIX: cc2 sirf RE ke revenue me meaningful hai
+        // baqi companies (assets/adv/others) me cc2 ko blank rakho taake keys match hon
+        all = all.map((r) => {
+          const cmp = String(r.company || "").trim();
+          const t = String(r.type || "").trim();
+          if (t === "Revenue" && cmp !== C_RE) {
+            return { ...r, cc2: "" };
+          }
+          return r;
+        });
 
         // ===== Base current/prev for selected company =====
         let curr = all.filter((r) => r.company === compParam && r.year === yearParam);
@@ -271,7 +287,7 @@ export default function TrialBalanceTableScreen() {
         // =========================================================
         // ✅ 1) TRANSFER INTO C_RE
         //   - Add ADV net profit as Revenue "Marketing Rights"
-        //   - Add ASSETS net profit as Cost "FM COST"  (IMPORTANT: use NEGATIVE of net profit)
+        //   - Add ASSETS net profit as Cost "FM COST"
         // =========================================================
         if (compParam === C_RE) {
           // ADV -> Marketing Rights (Revenue)
@@ -307,7 +323,7 @@ export default function TrialBalanceTableScreen() {
             cc2: "",
           }));
 
-          // ASSETS -> FM COST (Cost) = -(assets net profit) so it behaves like a cost line
+          // ASSETS -> FM COST (Cost)
           const assetsNetA = netProfitMonthlyRaw(all, C_ASSETS, yearParam);
           const assetsNetB = budgetNetProfitMonthlyRaw(all, C_ASSETS, yearParam);
           const assetsNetP = netProfitMonthlyRaw(all, C_ASSETS, prevYear);
@@ -321,8 +337,8 @@ export default function TrialBalanceTableScreen() {
             accountno: "__NET_ASSETS__",
             cc3code: "",
             auxcode: "FMC",
-            balanceFirst: -Number(assetsNetA[i] || 0),
-            budgetedAmount: -Number(assetsNetB[i] || 0),
+            balanceFirst: Number(assetsNetA[i] || 0),
+            budgetedAmount: Number(assetsNetB[i] || 0),
             cc2: "",
           }));
 
@@ -335,7 +351,7 @@ export default function TrialBalanceTableScreen() {
             accountno: "__NET_ASSETS__",
             cc3code: "",
             auxcode: "FMC",
-            balanceFirst: -Number(assetsNetP[i] || 0),
+            balanceFirst: Number(assetsNetP[i] || 0),
             budgetedAmount: 0,
             cc2: "",
           }));
@@ -463,29 +479,38 @@ export default function TrialBalanceTableScreen() {
 
           const keys = new Set<string>();
 
-          const addKey = (r: TrialBalanceRow) => {
-            const acc = String(r.accountno || "");
-            const code = t === "Revenue" ? String(r.cc3code || "") : String(r.auxcode || "");
-            keys.add(`${acc}||${code}`);
+          // ✅ KEY FIX + ✅ CLUBBING FIX
+          const makeKey = (r: TrialBalanceRow) => {
+            const acc = String(r.accountno || "").trim();
+            const code =
+              t === "Revenue"
+                ? String(r.cc3code || "").trim()
+                : String(r.auxcode || "").trim();
+
+            // ✅ club these accounts into one "bucket" by cc3code
+            if (t === "Revenue" && CLUB_ACCOUNTS.has(acc)) {
+              return `CLUB::${code}`;
+            }
+
+            const cc2Part =
+              t === "Revenue" && compParam === C_RE ? String(r.cc2 || "").trim() : "";
+
+            return `${acc}||${code}||${cc2Part}`;
           };
 
-          rowsCurr.forEach(addKey);
-          rowsPrev.forEach(addKey);
+          rowsCurr.forEach((r) => keys.add(makeKey(r)));
+          rowsPrev.forEach((r) => keys.add(makeKey(r)));
 
           const currByKey: Record<string, TrialBalanceRow[]> = {};
           const prevByKey: Record<string, TrialBalanceRow[]> = {};
 
           rowsCurr.forEach((r) => {
-            const acc = String(r.accountno || "");
-            const code = t === "Revenue" ? String(r.cc3code || "") : String(r.auxcode || "");
-            const k = `${acc}||${code}`;
+            const k = makeKey(r);
             (currByKey[k] ||= []).push(r);
           });
 
           rowsPrev.forEach((r) => {
-            const acc = String(r.accountno || "");
-            const code = t === "Revenue" ? String(r.cc3code || "") : String(r.auxcode || "");
-            const k = `${acc}||${code}`;
+            const k = makeKey(r);
             (prevByKey[k] ||= []).push(r);
           });
 
@@ -514,8 +539,20 @@ export default function TrialBalanceTableScreen() {
               prevP[idx] += Number(r.balanceFirst || 0);
             });
 
+            // ✅ apply club label/accountno override
+            const isClubbed = t === "Revenue" && String(k).startsWith("CLUB::");
+
+            const finalBase: TrialBalanceRow = isClubbed
+              ? {
+                  ...base,
+                  component: CLUB_ACCOUNTS_LABEL,
+                  accountno: CLUB_ACCOUNTS_ACCOUNT,
+                  cc2: "",
+                }
+              : base;
+
             unified.push({
-              ...base,
+              ...finalBase,
               type: t,
               company: compParam,
               year: yearParam,
@@ -667,9 +704,12 @@ export default function TrialBalanceTableScreen() {
       <Text numberOfLines={1} style={[styles.cell, { width: TYPE_W, color: "#333", textAlign: "left" }]}>
         {child.type}
       </Text>
+
+      {/* (Tumhara original display) */}
       <Text numberOfLines={1} style={[styles.cell, { width: COMP_W, color: "#333", textAlign: "left" }]}>
-        {child.accountno} + {child.cc2}
+        {child.component}
       </Text>
+
       <Text numberOfLines={1} style={[styles.cell, { width: CODE_W, color: "#666", textAlign: "left" }]}>
         {child.type === "Revenue" ? (child.cc3code || "") : (child.auxcode || "")}
       </Text>
@@ -1069,17 +1109,17 @@ export default function TrialBalanceTableScreen() {
     <View style={styles.Container}>
       <View style={{flexDirection:"row",justifyContent:'space-between',alignItems:"center", paddingRight:20,borderBottomWidth:1}}>
         <CustomHeader title={`${compParam} - ${yearParam}`} />
-        <CustomButton title="Export"  onPress={async () => {  console.log('pressed XLSX export');
+        <CustomButton
+          title="Export"
+          onPress={async () => {
             try {
-              const p = await exportTrialBalanceToXLSX(
-                data,
-                `TrialBalance_${company || 'All'}`
-              );
-              console.log('✅ file saved at:', p);
+              const p = await exportTrialBalanceToXLSX(data, `TrialBalance_${company || "All"}`);
+              console.log("✅ file saved at:", p);
             } catch (e: any) {
-              console.warn('❌ XLSX export failed:', e?.message ?? e);
+              console.warn("❌ XLSX export failed:", e?.message ?? e);
             }
-          }}/> 
+          }}
+        />
       </View>
 
       <View style={{ flexDirection: "row" }}>
@@ -1180,6 +1220,10 @@ const styles = StyleSheet.create({
 
 
 
+
+
+
+
 // // TrialBalance.tsx
 // import React, { useEffect, useRef, useState } from "react";
 // import {
@@ -1200,7 +1244,8 @@ const styles = StyleSheet.create({
 // import { getOtherCmpMongoFromSQLite } from "../../../../database/otherCmpTrailBal";
 // import { Colors } from "../../../../themes/color";
 // import CustomHeader from "../../../../component/customHeader";
-
+// import CustomButton from "../../../../component/customButton";
+// import { exportTrialBalanceToXLSX } from "../../../../database/Utils/export_to_excel";
 
 // // ======================= CONFIG =======================
 // const { width } = Dimensions.get("window");
@@ -1222,10 +1267,6 @@ const styles = StyleSheet.create({
 // const PREV_W  = 120; // previous year total (P)
 // const BUDGET_TOTAL_W = 120; // budget total (B)
 // const MONTH_W = 100;
-
-// // Right width: Total(A) | Total(P) | Total(B) | per month => A | P | B (x12)
-// const rightContentWidth =
-//   TOTAL_W + PREV_W + BUDGET_TOTAL_W + (12 * (3 * MONTH_W));
 
 // // ======================= API/DB TYPES =======================
 // type ApiRow = {
@@ -1326,7 +1367,7 @@ const styles = StyleSheet.create({
 //   return [];
 // };
 
-// // ======= Net Profit builders (for detail screen merge) =======
+// // ======= Net Profit builders (RAW sign world) =======
 // const sumMonthly = (
 //   all: TrialBalanceRow[],
 //   company: string,
@@ -1347,7 +1388,7 @@ const styles = StyleSheet.create({
 //   return out;
 // };
 
-// // net profit in RAW sign world = revenue + cost (because cost is normally negative in TB)
+// // net profit (raw) = revenue + cost (cost is typically negative already)
 // const netProfitMonthlyRaw = (all: TrialBalanceRow[], company: string, year: number) => {
 //   const rev = sumMonthly(all, company, year, "Revenue", "balanceFirst");
 //   const cst = sumMonthly(all, company, year, "Cost", "balanceFirst");
@@ -1361,22 +1402,20 @@ const styles = StyleSheet.create({
 // };
 
 // export default function TrialBalanceTableScreen() {
-//   const route = useRoute();
+//   const route = useRoute<any>();
 //   const { company = "", type = "", year, mode = "all" } = (route.params ?? {}) as {
 //     company?: string;
 //     type?: string;
 //     year?: number;
 //     mode?: "all" | "budget";
 //   };
-  
+
 //   const isBudgetMode = mode === "budget";
-  
 
-// // ✅ ADD THIS RIGHT HERE
-// const rightContentWidth = isBudgetMode
-//   ? (BUDGET_TOTAL_W + (12 * MONTH_W)) // Total(B) + 12 months (B)
-//   : (TOTAL_W + PREV_W + BUDGET_TOTAL_W + (12 * (3 * MONTH_W))); // old
-
+//   // ✅ RIGHT WIDTH changes by mode
+//   const rightContentWidth = isBudgetMode
+//     ? (BUDGET_TOTAL_W + (12 * MONTH_W)) // Total(B) + 12 months(B)
+//     : (TOTAL_W + PREV_W + BUDGET_TOTAL_W + (12 * (3 * MONTH_W))); // Total(A/P/B) + months(A/P/B)
 
 //   const compParam = String(company || "").trim();
 //   const typeParam = String(type || "").trim();
@@ -1391,7 +1430,7 @@ const styles = StyleSheet.create({
 //   const toggleGroup = (key: string) =>
 //     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
-//   // Freeze first 3 columns (LEFT) + RIGHT scrollable
+//   // sync scroll
 //   const leftListRef = useRef<FlatList<RowItem>>(null);
 //   const rightListRef = useRef<FlatList<RowItem>>(null);
 //   const headerHRef = useRef<ScrollView>(null);
@@ -1443,9 +1482,7 @@ const styles = StyleSheet.create({
 //           return;
 //         }
 
-//         // ✅ choose sqlite DB based on company
 //         const isWestwalk = WESTWALK_COMPANIES.has(compParam);
-
 //         const snap = isWestwalk
 //           ? await getWestwalkMongoFromSQLite()
 //           : await getOtherCmpMongoFromSQLite();
@@ -1457,15 +1494,15 @@ const styles = StyleSheet.create({
 //         let curr = all.filter((r) => r.company === compParam && r.year === yearParam);
 //         let prev = all.filter((r) => r.company === compParam && r.year === prevYear);
 
-//         // ===== ✅ APPLY YOUR CHART MERGE LOGIC IN DETAIL SCREEN =====
-//         // For West Walk Real Estate ONLY:
-//         //   - Revenue section: add Advertisement NET PROFIT as component "Marketing Rights"
-//         //   - Cost section: add Assets NET PROFIT as component "FM COST"
+//         // =========================================================
+//         // ✅ 1) TRANSFER INTO C_RE
+//         //   - Add ADV net profit as Revenue "Marketing Rights"
+//         //   - Add ASSETS net profit as Cost "FM COST"  (IMPORTANT: use NEGATIVE of net profit)
+//         // =========================================================
 //         if (compParam === C_RE) {
-//           // ---- Marketing Rights (Revenue) = ADV net profit (rev + cost raw) ----
+//           // ADV -> Marketing Rights (Revenue)
 //           const advNetA = netProfitMonthlyRaw(all, C_ADV, yearParam);
 //           const advNetB = budgetNetProfitMonthlyRaw(all, C_ADV, yearParam);
-
 //           const advNetP = netProfitMonthlyRaw(all, C_ADV, prevYear);
 
 //           const marketingRightsRowsCurr: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
@@ -1474,7 +1511,7 @@ const styles = StyleSheet.create({
 //             component: "Marketing Rights",
 //             year: yearParam,
 //             month: i + 1,
-//             accountno: "__NET_ADV__",   // unique
+//             accountno: "__NET_ADV__",
 //             cc3code: "MR",
 //             auxcode: "",
 //             balanceFirst: Number(advNetA[i] || 0),
@@ -1496,11 +1533,9 @@ const styles = StyleSheet.create({
 //             cc2: "",
 //           }));
 
-//           // ---- FM COST (Cost) = ASSETS net profit BUT as COST LINE (negative raw) ----
-//           // chart me assets net profit cost side me add hota hai => TB raw cost line should be -(net profit)
+//           // ASSETS -> FM COST (Cost) = -(assets net profit) so it behaves like a cost line
 //           const assetsNetA = netProfitMonthlyRaw(all, C_ASSETS, yearParam);
 //           const assetsNetB = budgetNetProfitMonthlyRaw(all, C_ASSETS, yearParam);
-
 //           const assetsNetP = netProfitMonthlyRaw(all, C_ASSETS, prevYear);
 
 //           const fmCostRowsCurr: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
@@ -1512,8 +1547,8 @@ const styles = StyleSheet.create({
 //             accountno: "__NET_ASSETS__",
 //             cc3code: "",
 //             auxcode: "FMC",
-//             balanceFirst: Number(assetsNetA[i] || 0),      // ✅ important: negative for Cost section
-//             budgetedAmount: -Number(assetsNetB[i] || 0),    // ✅ same for budget
+//             balanceFirst: Number(assetsNetA[i] || 0),
+//             budgetedAmount: Number(assetsNetB[i] || 0),
 //             cc2: "",
 //           }));
 
@@ -1526,25 +1561,102 @@ const styles = StyleSheet.create({
 //             accountno: "__NET_ASSETS__",
 //             cc3code: "",
 //             auxcode: "FMC",
+//             balanceFirst: Number(assetsNetP[i] || 0),
+//             budgetedAmount: 0,
+//             cc2: "",
+//           }));
+
+//           curr = curr.concat(marketingRightsRowsCurr, fmCostRowsCurr);
+//           prev = prev.concat(marketingRightsRowsPrev, fmCostRowsPrev);
+//         }
+
+//         // =========================================================
+//         // ✅ 2) OFFSET INSIDE SOURCE COMPANIES (MAKE NET PROFIT = 0)
+//         // Assets: add Revenue "Westwalk Contract" = -(assets net profit)
+//         // Adv:    add Cost    "Westwalk Contract" = -(adv net profit)
+//         // =========================================================
+
+//         // ASSETS company offset => Revenue line
+//         if (compParam === C_ASSETS) {
+//           const assetsNetA = netProfitMonthlyRaw(all, C_ASSETS, yearParam);
+//           const assetsNetB = budgetNetProfitMonthlyRaw(all, C_ASSETS, yearParam);
+//           const assetsNetP = netProfitMonthlyRaw(all, C_ASSETS, prevYear);
+
+//           const offsetAssetsCurr: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
+//             type: "Revenue",
+//             company: C_ASSETS,
+//             component: "Westwalk Contract",
+//             year: yearParam,
+//             month: i + 1,
+//             accountno: "__OFFSET_ASSETS_NET__",
+//             cc3code: "WWC",
+//             auxcode: "",
+//             balanceFirst: -Number(assetsNetA[i] || 0),
+//             budgetedAmount: -Number(assetsNetB[i] || 0),
+//             cc2: "",
+//           }));
+
+//           const offsetAssetsPrev: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
+//             type: "Revenue",
+//             company: C_ASSETS,
+//             component: "Westwalk Contract",
+//             year: prevYear,
+//             month: i + 1,
+//             accountno: "__OFFSET_ASSETS_NET__",
+//             cc3code: "WWC",
+//             auxcode: "",
 //             balanceFirst: -Number(assetsNetP[i] || 0),
 //             budgetedAmount: 0,
 //             cc2: "",
 //           }));
 
-//           // ✅ append into curr/prev (so grouping + totals auto include them)
-//           curr = curr.concat(marketingRightsRowsCurr, fmCostRowsCurr);
-//           prev = prev.concat(marketingRightsRowsPrev, fmCostRowsPrev);
+//           curr = curr.concat(offsetAssetsCurr);
+//           prev = prev.concat(offsetAssetsPrev);
 //         }
 
-//         // filter by type param (after merge)
+//         // ADV company offset => Cost line
+//         if (compParam === C_ADV) {
+//           const advNetA = netProfitMonthlyRaw(all, C_ADV, yearParam);
+//           const advNetB = budgetNetProfitMonthlyRaw(all, C_ADV, yearParam);
+//           const advNetP = netProfitMonthlyRaw(all, C_ADV, prevYear);
+
+//           const offsetAdvCurr: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
+//             type: "Cost",
+//             company: C_ADV,
+//             component: "Westwalk Contract",
+//             year: yearParam,
+//             month: i + 1,
+//             accountno: "__OFFSET_ADV_NET__",
+//             cc3code: "",
+//             auxcode: "WWC",
+//             balanceFirst: -Number(advNetA[i] || 0),
+//             budgetedAmount: -Number(advNetB[i] || 0),
+//             cc2: "",
+//           }));
+
+//           const offsetAdvPrev: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
+//             type: "Cost",
+//             company: C_ADV,
+//             component: "Westwalk Contract",
+//             year: prevYear,
+//             month: i + 1,
+//             accountno: "__OFFSET_ADV_NET__",
+//             cc3code: "",
+//             auxcode: "WWC",
+//             balanceFirst: -Number(advNetP[i] || 0),
+//             budgetedAmount: 0,
+//             cc2: "",
+//           }));
+
+//           curr = curr.concat(offsetAdvCurr);
+//           prev = prev.concat(offsetAdvPrev);
+//         }
+
+//         // filter by type param (after merge+offset)
 //         if (typeParam) curr = curr.filter((r) => String(r.type) === typeParam);
 //         if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
 
-//         // ========== PREV MAPS (P) ==========
-//         const prevRowMonthlyByKey: Record<string, number[]> = {};
-//         const prevRowTotalByKey: Record<string, number> = {};
-//         const prevComponentMonthlyByTypeComp: Record<string, number[]> = {};
-//         const prevComponentTotalByTypeComp: Record<string, number> = {};
+//         // ========== PREV TOTALS ==========
 //         const prevTotalsMonthlyByType: Record<string, number[]> = {
 //           Revenue: Array(12).fill(0),
 //           Cost: Array(12).fill(0),
@@ -1554,106 +1666,80 @@ const styles = StyleSheet.create({
 //         prev.forEach((r) => {
 //           if (!isValidMonth(r.month)) return;
 //           const idx = (r.month as number) - 1;
-
 //           const t = String(r.type || "");
-//           const acc = String(r.accountno || "");
-//           const code = t === "Revenue" ? String(r.cc3code || "") : String(r.auxcode || "");
-//           const k = buildMatchKey(t, acc, code);
-
-//           if (!prevRowMonthlyByKey[k]) prevRowMonthlyByKey[k] = Array(12).fill(0);
-//           prevRowMonthlyByKey[k][idx] += Number(r.balanceFirst || 0);
-//           prevRowTotalByKey[k] = (prevRowTotalByKey[k] || 0) + Number(r.balanceFirst || 0);
-
-//           const compKey = `${t}::${String(r.component || "").trim()}`;
-//           if (!prevComponentMonthlyByTypeComp[compKey])
-//             prevComponentMonthlyByTypeComp[compKey] = Array(12).fill(0);
-//           prevComponentMonthlyByTypeComp[compKey][idx] += Number(r.balanceFirst || 0);
-//           prevComponentTotalByTypeComp[compKey] =
-//             (prevComponentTotalByTypeComp[compKey] || 0) + Number(r.balanceFirst || 0);
-
 //           if (t === "Revenue" || t === "Cost") {
 //             prevTotalsMonthlyByType[t][idx] += Number(r.balanceFirst || 0);
 //             prevTotalsByType[t] += Number(r.balanceFirst || 0);
 //           }
 //         });
 
-//         const prevGrandMonthly = Array(12)
-//           .fill(0)
-//           .map(
-//             (_, i) =>
-//               (prevTotalsMonthlyByType.Revenue[i] || 0) +
-//               (prevTotalsMonthlyByType.Cost[i] || 0)
-//           );
-//         const prevGrandTotal =
-//           (prevTotalsByType.Revenue || 0) + (prevTotalsByType.Cost || 0);
+//         const prevGrandMonthly = Array(12).fill(0).map(
+//           (_, i) => (prevTotalsMonthlyByType.Revenue[i] || 0) + (prevTotalsMonthlyByType.Cost[i] || 0)
+//         );
+//         const prevGrandTotal = (prevTotalsByType.Revenue || 0) + (prevTotalsByType.Cost || 0);
 
-//         // ========== STRUCTURE CURRENT YEAR (A + B) ==========
+//         // ========== STRUCTURE ==========
 //         const structured: RowItem[] = [];
 //         structured.push({ yearHeader: true, company: compParam, year: yearParam } as RowItem);
 
+//         // ✅ UNION build (curr + prev keys) + grouping by component
 //         const buildGrouped = (t: "Revenue" | "Cost") => {
 //           const rowsCurr = curr.filter((r) => r.type === t);
 //           const rowsPrev = prev.filter((r) => r.type === t);
-        
-//           // ✅ collect ALL unique keys from both years
+
 //           const keys = new Set<string>();
-        
+
 //           const addKey = (r: TrialBalanceRow) => {
 //             const acc = String(r.accountno || "");
 //             const code = t === "Revenue" ? String(r.cc3code || "") : String(r.auxcode || "");
 //             keys.add(`${acc}||${code}`);
 //           };
-        
+
 //           rowsCurr.forEach(addKey);
 //           rowsPrev.forEach(addKey);
-        
-//           // ✅ pre-group rows by key for faster sums
+
 //           const currByKey: Record<string, TrialBalanceRow[]> = {};
 //           const prevByKey: Record<string, TrialBalanceRow[]> = {};
-        
+
 //           rowsCurr.forEach((r) => {
 //             const acc = String(r.accountno || "");
 //             const code = t === "Revenue" ? String(r.cc3code || "") : String(r.auxcode || "");
 //             const k = `${acc}||${code}`;
 //             (currByKey[k] ||= []).push(r);
 //           });
-        
+
 //           rowsPrev.forEach((r) => {
 //             const acc = String(r.accountno || "");
 //             const code = t === "Revenue" ? String(r.cc3code || "") : String(r.auxcode || "");
 //             const k = `${acc}||${code}`;
 //             (prevByKey[k] ||= []).push(r);
 //           });
-        
-//           // ✅ build unified rows
+
 //           const unified: RowItem[] = [];
-        
+
 //           keys.forEach((k) => {
 //             const currRows = currByKey[k] || [];
 //             const prevRows = prevByKey[k] || [];
-        
-//             // take base info from current if exists else previous
+
 //             const base = (currRows[0] || prevRows[0]) as TrialBalanceRow;
-        
+
 //             const balancesA = Array(12).fill(0);
 //             const budgetB = Array(12).fill(0);
 //             const prevP = Array(12).fill(0);
-        
-//             // fill A/B from current year
+
 //             currRows.forEach((r) => {
 //               if (!isValidMonth(r.month)) return;
 //               const idx = Number(r.month) - 1;
 //               balancesA[idx] += Number(r.balanceFirst || 0);
 //               budgetB[idx] += Number(r.budgetedAmount || 0);
 //             });
-        
-//             // fill P from previous year
+
 //             prevRows.forEach((r) => {
 //               if (!isValidMonth(r.month)) return;
 //               const idx = Number(r.month) - 1;
 //               prevP[idx] += Number(r.balanceFirst || 0);
 //             });
-        
+
 //             unified.push({
 //               ...base,
 //               type: t,
@@ -1667,34 +1753,32 @@ const styles = StyleSheet.create({
 //               prevYearSum: sumArr(prevP),
 //             } as RowItem);
 //           });
-        
-//           // ✅ group by component like you already do
+
 //           const byComponent: Record<string, RowItem[]> = {};
 //           unified.forEach((r) => {
 //             const comp = String(r.component || "").trim();
 //             const gk = `${yearParam}::${t}::${comp}`;
 //             (byComponent[gk] ||= []).push(r);
 //           });
-        
+
 //           const collapsed: RowItem[] = [];
-        
+
 //           Object.entries(byComponent).forEach(([groupKey, arr]) => {
 //             if (arr.length <= 1) {
 //               collapsed.push(arr[0]);
 //               return;
 //             }
-        
-//             // parent group totals
+
 //             const sumA = Array(12).fill(0);
 //             const sumB = Array(12).fill(0);
 //             const sumP = Array(12).fill(0);
-        
+
 //             arr.forEach((ch) => {
 //               ch.totalBalances?.forEach((v, i) => (sumA[i] += v));
 //               ch.budgetMonthly?.forEach((v, i) => (sumB[i] += v));
 //               ch.prevMonthlyBalances?.forEach((v, i) => (sumP[i] += v));
 //             });
-        
+
 //             collapsed.push({
 //               isGroupParent: true,
 //               groupKey,
@@ -1711,10 +1795,9 @@ const styles = StyleSheet.create({
 //               children: arr,
 //             } as RowItem);
 //           });
-        
+
 //           return collapsed;
 //         };
-        
 
 //         // Revenue
 //         const revenueCollapsed = buildGrouped("Revenue");
@@ -1819,17 +1902,16 @@ const styles = StyleSheet.create({
 //     </View>
 //   );
 
-
 //   const RightChildRow = ({ child }: { child: RowItem }) => {
 //     const cbals = child.totalBalances ?? Array(12).fill(0);
 //     const ctotal = child.totalSum ?? sumArr(cbals);
-  
+
 //     const prev = child.prevYearSum ?? 0;
 //     const pmon = child.prevMonthlyBalances ?? Array(12).fill(0);
-  
+
 //     const bmon = child.budgetMonthly ?? Array(12).fill(0);
 //     const btotal = child.budgetSum ?? sumArr(bmon);
-  
+
 //     return (
 //       <View style={[styles.bodyRow, { height: ROW_HEIGHT }]}>
 //         {!isBudgetMode && (
@@ -1842,18 +1924,18 @@ const styles = StyleSheet.create({
 //             </Text>
 //           </>
 //         )}
-  
+
 //         <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W }]}>
 //           {Number(btotal).toLocaleString("en-US", { maximumFractionDigits: 0 })}
 //         </Text>
-  
+
 //         {months.map((_, i) => {
 //           const bodyCellStyle = [
 //             styles.cell,
 //             { width: MONTH_W, paddingVertical: 5 },
 //             DARK_GROUP_INDEX.has(i) && styles.darkBodyCell,
 //           ];
-  
+
 //           if (isBudgetMode) {
 //             return (
 //               <Text key={`mch-${i}-B`} numberOfLines={1} style={bodyCellStyle}>
@@ -1861,7 +1943,7 @@ const styles = StyleSheet.create({
 //               </Text>
 //             );
 //           }
-  
+
 //           return (
 //             <React.Fragment key={`mch-${i}`}>
 //               <Text numberOfLines={1} style={bodyCellStyle}>
@@ -1879,7 +1961,8 @@ const styles = StyleSheet.create({
 //       </View>
 //     );
 //   };
-  
+
+//   // =================== HEADERS ===================
 //   const LeftHeader = () => (
 //     <View style={[styles.headerRow, { width: 384, height: HEADER_HEIGHT, backgroundColor: "#EFEFEF" }]}>
 //       <Text numberOfLines={1} style={[styles.cell, { width: TYPE_W, fontWeight: "bold" }]}>Type</Text>
@@ -1888,38 +1971,6 @@ const styles = StyleSheet.create({
 //     </View>
 //   );
 
-
-//   //   <ScrollView
-//   //     ref={headerHRef}
-//   //     horizontal
-//   //     onScroll={onHeaderHScroll}
-//   //     scrollEventThrottle={16}
-//   //     showsHorizontalScrollIndicator
-//   //   >
-//   //     <View style={[styles.headerRow, { width: rightContentWidth, height: HEADER_HEIGHT, backgroundColor: "#ffffff" }]}>
-//   //       <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W, fontWeight: "bold", textAlign: "center" }]}>Total (A)</Text>
-//   //       <Text numberOfLines={1} style={[styles.cell, { width: PREV_W, fontWeight: "bold", textAlign: "center" }]}>Total (P)</Text>
-//   //       <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold", textAlign: "center" }]}>Total (B)</Text>
-
-//   //       {months.map((m, i) => {
-//   //         const headerCellStyle = [
-//   //           styles.cell,
-//   //           { width: MONTH_W, fontWeight: "bold", textAlign: "center", paddingVertical: 13 },
-//   //           DARK_GROUP_INDEX.has(i) && styles.darkBodyCell,
-//   //         ];
-//   //         return (
-//   //           <React.Fragment key={`h-${m}`}>
-//   //             <Text numberOfLines={1} style={headerCellStyle}>{`${m} (A)`}</Text>
-//   //             <Text numberOfLines={1} style={headerCellStyle}>{`${m} (P)`}</Text>
-//   //             <Text numberOfLines={1} style={headerCellStyle}>{`${m} (B)`}</Text>
-//   //           </React.Fragment>
-//   //         );
-//   //       })}
-//   //     </View>
-//   //   </ScrollView>
-//   // );
-
-//   // =================== ROW RENDERERS ===================
 //   const RightHeader = () => (
 //     <ScrollView
 //       ref={headerHRef}
@@ -1939,18 +1990,18 @@ const styles = StyleSheet.create({
 //             </Text>
 //           </>
 //         )}
-  
+
 //         <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold", textAlign: "center" }]}>
 //           Total (B)
 //         </Text>
-  
+
 //         {months.map((m, i) => {
 //           const headerCellStyle = [
 //             styles.cell,
 //             { width: MONTH_W, fontWeight: "bold", textAlign: "center", paddingVertical: 13 },
 //             DARK_GROUP_INDEX.has(i) && styles.darkBodyCell,
 //           ];
-  
+
 //           if (isBudgetMode) {
 //             return (
 //               <Text key={`h-${m}-B`} numberOfLines={1} style={headerCellStyle}>
@@ -1958,7 +2009,7 @@ const styles = StyleSheet.create({
 //               </Text>
 //             );
 //           }
-  
+
 //           return (
 //             <React.Fragment key={`h-${m}`}>
 //               <Text numberOfLines={1} style={headerCellStyle}>{`${m} (A)`}</Text>
@@ -1970,8 +2021,8 @@ const styles = StyleSheet.create({
 //       </View>
 //     </ScrollView>
 //   );
-  
-  
+
+//   // =================== ROW RENDERERS ===================
 //   const renderLeftRow = ({ item }: { item: RowItem }) => {
 //     if (item.yearHeader) {
 //       return (
@@ -2055,148 +2106,22 @@ const styles = StyleSheet.create({
 //     );
 //   };
 
-//   // const renderRightRow = ({ item }: { item: RowItem }) => {
-//   //   if (item.yearHeader) {
-//   //     return <View style={[styles.yearHeaderRow, { width: rightContentWidth, height: YEAR_HEADER_HEIGHT }]} />;
-//   //   }
-
-//   //   const renderTriplets = (row: RowItem, weight?: "normal" | "bold" | "600", enableBanding: boolean = true) => {
-//   //     const cbals = row.totalBalances ?? Array(12).fill(0);
-//   //     const pmon = row.prevMonthlyBalances ?? Array(12).fill(0);
-//   //     const bmon = row.budgetMonthly ?? Array(12).fill(0);
-
-//   //     return months.map((_, i) => {
-//   //       const cellWeight =
-//   //         weight === "bold" ? "bold" : (weight === "600" ? ("600" as any) : "normal");
-
-//   //       const bodyCellStyle = [
-//   //         styles.cell,
-//   //         { width: MONTH_W, fontWeight: cellWeight, paddingVertical: 6 },
-//   //         enableBanding && DARK_GROUP_INDEX.has(i) && styles.darkBodyCell,
-//   //       ];
-
-//   //       return (
-//   //         <React.Fragment key={`row-m-${i}`}>
-//   //           <Text numberOfLines={1} style={bodyCellStyle}>
-//   //             {(cbals[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //           </Text>
-//   //           <Text numberOfLines={1} style={bodyCellStyle}>
-//   //             {(pmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //           </Text>
-//   //           <Text numberOfLines={1} style={bodyCellStyle}>
-//   //             {(bmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //           </Text>
-//   //         </React.Fragment>
-//   //       );
-//   //     });
-//   //   };
-
-//   //   if (item.isGroupParent) {
-//   //     const key = item.groupKey || `${item.year}::${item.type}::${item.component || ""}`;
-//   //     const isOpen = !!expandedGroups[key];
-
-//   //     const cbals = item.totalBalances ?? Array(12).fill(0);
-//   //     const totalA = item.totalSum ?? sumArr(cbals);
-//   //     const totalP = item.prevYearSum ?? 0;
-
-//   //     const bmon = item.budgetMonthly ?? Array(12).fill(0);
-//   //     const totalB = item.budgetSum ?? sumArr(bmon);
-
-//   //     return (
-//   //       <View>
-//   //         <View style={[styles.bodyRow, { backgroundColor: "#f9fbff", height: ROW_HEIGHT }]}>
-//   //           <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W, fontWeight: "600" }]}>
-//   //             {Number(totalA).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //           </Text>
-//   //           <Text numberOfLines={1} style={[styles.cell, { width: PREV_W, fontWeight: "600" }]}>
-//   //             {Number(totalP).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //           </Text>
-//   //           <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "600" }]}>
-//   //             {Number(totalB).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //           </Text>
-
-//   //           {renderTriplets(item, "600", true)}
-//   //         </View>
-
-//   //         {isOpen && item.children?.map((child, idx) => (
-//   //           <RightChildRow key={`RCH-${key}-${idx}`} child={child} />
-//   //         ))}
-//   //       </View>
-//   //     );
-//   //   }
-
-//   //   if (item.isTotalRow) {
-//   //     let bgColor = "#f0f8ff";
-//   //     let MbTotal = 0;
-//   //     if (item.totalType === "Revenue") bgColor = "#d1f7d1";
-//   //     if (item.totalType === "Cost") bgColor = "#f7d1d1";
-//   //     if (item.totalType === "Grand") { bgColor = "#ffe4b5"; MbTotal = 50; }
-
-//   //     const totalA = Number(item.totalSum || 0);
-//   //     const totalP = Number(item.prevYearSum || 0);
-//   //     const totalB = Number(item.budgetSum || 0);
-
-//   //     return (
-//   //       <View style={[
-//   //         styles.bodyRow,
-//   //         { backgroundColor: bgColor, borderTopWidth: 2, borderColor: "#aaa", height: ROW_HEIGHT, marginBottom: MbTotal },
-//   //       ]}>
-//   //         <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W, fontWeight: "bold" }]}>
-//   //           {totalA.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //         </Text>
-//   //         <Text numberOfLines={1} style={[styles.cell, { width: PREV_W, fontWeight: "bold" }]}>
-//   //           {totalP.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //         </Text>
-//   //         <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold" }]}>
-//   //           {totalB.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //         </Text>
-
-//   //         {renderTriplets(item, "bold", false)}
-//   //       </View>
-//   //     );
-//   //   }
-
-//   //   const cbals = item.totalBalances ?? Array(12).fill(0);
-//   //   const totalA = item.totalSum ?? sumArr(cbals);
-//   //   const totalP = item.prevYearSum ?? 0;
-
-//   //   const bmon = item.budgetMonthly ?? Array(12).fill(0);
-//   //   const totalB = item.budgetSum ?? sumArr(bmon);
-
-//   //   return (
-//   //     <View style={[styles.bodyRow, { height: ROW_HEIGHT }]}>
-//   //       <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W }]}>
-//   //         {Number(totalA).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //       </Text>
-//   //       <Text numberOfLines={1} style={[styles.cell, { width: PREV_W }]}>
-//   //         {Number(totalP).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //       </Text>
-//   //       <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W }]}>
-//   //         {Number(totalB).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-//   //       </Text>
-
-//   //       {renderTriplets(item, "normal", true)}
-//   //     </View>
-//   //   );
-//   // };
-
-
 //   const renderRightRow = ({ item }: { item: RowItem }) => {
 //     if (item.yearHeader) {
 //       return <View style={[styles.yearHeaderRow, { width: rightContentWidth, height: YEAR_HEADER_HEIGHT }]} />;
 //     }
-  
+
 //     const renderBudgetMonths = (row: RowItem, weight?: "normal" | "bold" | "600", enableBanding: boolean = true) => {
 //       const bmon = row.budgetMonthly ?? Array(12).fill(0);
 //       const cellWeight = weight === "bold" ? "bold" : (weight === "600" ? ("600" as any) : "normal");
-  
+
 //       return months.map((_, i) => {
 //         const bodyCellStyle = [
 //           styles.cell,
 //           { width: MONTH_W, fontWeight: cellWeight, paddingVertical: 6 },
 //           enableBanding && DARK_GROUP_INDEX.has(i) && styles.darkBodyCell,
 //         ];
-  
+
 //         return (
 //           <Text key={`row-b-${i}`} numberOfLines={1} style={bodyCellStyle}>
 //             {(bmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
@@ -2204,22 +2129,22 @@ const styles = StyleSheet.create({
 //         );
 //       });
 //     };
-  
+
 //     const renderTriplets = (row: RowItem, weight?: "normal" | "bold" | "600", enableBanding: boolean = true) => {
 //       const cbals = row.totalBalances ?? Array(12).fill(0);
 //       const pmon = row.prevMonthlyBalances ?? Array(12).fill(0);
 //       const bmon = row.budgetMonthly ?? Array(12).fill(0);
-  
+
 //       return months.map((_, i) => {
 //         const cellWeight =
 //           weight === "bold" ? "bold" : (weight === "600" ? ("600" as any) : "normal");
-  
+
 //         const bodyCellStyle = [
 //           styles.cell,
 //           { width: MONTH_W, fontWeight: cellWeight, paddingVertical: 6 },
 //           enableBanding && DARK_GROUP_INDEX.has(i) && styles.darkBodyCell,
 //         ];
-  
+
 //         return (
 //           <React.Fragment key={`row-m-${i}`}>
 //             <Text numberOfLines={1} style={bodyCellStyle}>
@@ -2235,18 +2160,18 @@ const styles = StyleSheet.create({
 //         );
 //       });
 //     };
-  
+
 //     if (item.isGroupParent) {
 //       const key = item.groupKey || `${item.year}::${item.type}::${item.component || ""}`;
 //       const isOpen = !!expandedGroups[key];
-  
+
 //       const cbals = item.totalBalances ?? Array(12).fill(0);
 //       const totalA = item.totalSum ?? sumArr(cbals);
 //       const totalP = item.prevYearSum ?? 0;
-  
+
 //       const bmon = item.budgetMonthly ?? Array(12).fill(0);
 //       const totalB = item.budgetSum ?? sumArr(bmon);
-  
+
 //       return (
 //         <View>
 //           <View style={[styles.bodyRow, { backgroundColor: "#f9fbff", height: ROW_HEIGHT }]}>
@@ -2260,32 +2185,32 @@ const styles = StyleSheet.create({
 //                 </Text>
 //               </>
 //             )}
-  
+
 //             <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "600" }]}>
 //               {Number(totalB).toLocaleString("en-US", { maximumFractionDigits: 0 })}
 //             </Text>
-  
+
 //             {isBudgetMode ? renderBudgetMonths(item, "600", true) : renderTriplets(item, "600", true)}
 //           </View>
-  
+
 //           {isOpen && item.children?.map((child, idx) => (
 //             <RightChildRow key={`RCH-${key}-${idx}`} child={child} />
 //           ))}
 //         </View>
 //       );
 //     }
-  
+
 //     if (item.isTotalRow) {
 //       let bgColor = "#f0f8ff";
 //       let MbTotal = 0;
 //       if (item.totalType === "Revenue") bgColor = "#d1f7d1";
 //       if (item.totalType === "Cost") bgColor = "#f7d1d1";
 //       if (item.totalType === "Grand") { bgColor = "#ffe4b5"; MbTotal = 50; }
-  
+
 //       const totalA = Number(item.totalSum || 0);
 //       const totalP = Number(item.prevYearSum || 0);
 //       const totalB = Number(item.budgetSum || 0);
-  
+
 //       return (
 //         <View style={[
 //           styles.bodyRow,
@@ -2301,24 +2226,24 @@ const styles = StyleSheet.create({
 //               </Text>
 //             </>
 //           )}
-  
+
 //           <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold" }]}>
 //             {totalB.toLocaleString("en-US", { maximumFractionDigits: 0 })}
 //           </Text>
-  
+
 //           {isBudgetMode ? renderBudgetMonths(item, "bold", false) : renderTriplets(item, "bold", false)}
 //         </View>
 //       );
 //     }
-  
+
 //     // normal row
 //     const cbals = item.totalBalances ?? Array(12).fill(0);
 //     const totalA = item.totalSum ?? sumArr(cbals);
 //     const totalP = item.prevYearSum ?? 0;
-  
+
 //     const bmon = item.budgetMonthly ?? Array(12).fill(0);
 //     const totalB = item.budgetSum ?? sumArr(bmon);
-  
+
 //     return (
 //       <View style={[styles.bodyRow, { height: ROW_HEIGHT }]}>
 //         {!isBudgetMode && (
@@ -2331,17 +2256,15 @@ const styles = StyleSheet.create({
 //             </Text>
 //           </>
 //         )}
-  
+
 //         <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W }]}>
 //           {Number(totalB).toLocaleString("en-US", { maximumFractionDigits: 0 })}
 //         </Text>
-  
+
 //         {isBudgetMode ? renderBudgetMonths(item, "normal", true) : renderTriplets(item, "normal", true)}
 //       </View>
 //     );
 //   };
-  
-
 
 //   // =================== UI ===================
 //   if (!compParam || !yearParam) {
@@ -2370,8 +2293,19 @@ const styles = StyleSheet.create({
 
 //   return (
 //     <View style={styles.Container}>
-//       <View style={{paddingBottom:20}}>
-//         <CustomHeader title={`${compParam} -${yearParam}`} />
+//       <View style={{flexDirection:"row",justifyContent:'space-between',alignItems:"center", paddingRight:20,borderBottomWidth:1}}>
+//         <CustomHeader title={`${compParam} - ${yearParam}`} />
+//         <CustomButton title="Export"  onPress={async () => {  console.log('pressed XLSX export');
+//             try {
+//               const p = await exportTrialBalanceToXLSX(
+//                 data,
+//                 `TrialBalance_${company || 'All'}`
+//               );
+//               console.log('✅ file saved at:', p);
+//             } catch (e: any) {
+//               console.warn('❌ XLSX export failed:', e?.message ?? e);
+//             }
+//           }}/> 
 //       </View>
 
 //       <View style={{ flexDirection: "row" }}>
@@ -2466,9 +2400,6 @@ const styles = StyleSheet.create({
 //     backgroundColor: "#EFEFEF",
 //   },
 // });
-
-
-
 
 
 

@@ -15,13 +15,13 @@ const C_ASSETS = "Assets Services Company";
 // ✅ helper: net = revenue + cost (cost signed)
 function calcRevenue(rows: any[]) {
   return rows
-    .filter((x) => String(x.accountType || "").toLowerCase() === "revenue")
+    .filter((x) => String(x.accountType || "").trim().toLowerCase() === "revenue")
     .reduce((s, x) => s + (Number(x.balanceFirst) || 0), 0);
 }
 
 function calcCost(rows: any[]) {
   return rows
-    .filter((x) => String(x.accountType || "").toLowerCase() === "cost")
+    .filter((x) => String(x.accountType || "").trim().toLowerCase() === "cost")
     .reduce((s, x) => s + (Number(x.balanceFirst) || 0), 0);
 }
 
@@ -41,19 +41,16 @@ export default function PnLSummaryCards({ company, year }: Props) {
 
     const WESTWALK_COMPANIES = new Set([C_RE, C_ADV, C_ASSETS]);
 
-    // ✅ Handles BOTH formats:
-    // - OtherCmp: [ ... ]
-    // - Westwalk: { success, count, data: [ ... ] }
     const extractRows = (snap: any) => {
       const payload = snap?.data;
 
-      // sqlite wrapper might be: { savedAt, data: [...] }
+      // othercmp snapshot: { savedAt, data: [ ... ] }
       if (Array.isArray(payload)) return payload;
 
-      // sqlite wrapper might be: { savedAt, data: { success, count, data: [...] } }
+      // westwalk snapshot: { savedAt, data: { success, count, data:[...] } }
       if (payload && Array.isArray(payload.data)) return payload.data;
 
-      // (extra safety) if someone passes raw response directly
+      // extra safety
       if (Array.isArray(snap)) return snap;
       if (snap && Array.isArray(snap.data)) return snap.data;
 
@@ -94,7 +91,7 @@ export default function PnLSummaryCards({ company, year }: Props) {
   }, [year, company]);
 
   const { totalRevenue, totalCost, netProfit } = useMemo(() => {
-    // ✅ case-insensitive company match (prevents mismatch issues)
+    // ✅ case-insensitive company match
     const byCompany = (name: string) => {
       const n = String(name || "").trim().toLowerCase();
       return allRows.filter(
@@ -102,14 +99,17 @@ export default function PnLSummaryCards({ company, year }: Props) {
       );
     };
 
-    const currentRows = byCompany(company);
+    const compName = String(company || "").trim();
+    const compNameLower = compName.toLowerCase();
 
-    // Normal case
+    const currentRows = byCompany(compName);
+
+    // Base (as-is)
     let rev = calcRevenue(currentRows);
     let cost = calcCost(currentRows);
 
-    // ✅ Special case: West Walk Real Estate adjustments
-    if (String(company).trim() === C_RE) {
+    // ✅ 1) RE: add both companies into RE
+    if (compName === C_RE) {
       const advNet = calcNetProfit(byCompany(C_ADV));
       const assetsNet = calcNetProfit(byCompany(C_ASSETS));
 
@@ -118,6 +118,20 @@ export default function PnLSummaryCards({ company, year }: Props) {
 
       // Assets Services net profit -> add to Real Estate cost
       cost = cost + assetsNet;
+    }
+
+    // ✅ 2) Assets: make net profit ZERO by adding net as Revenue (Westwalk Contract)
+    if (compNameLower === C_ASSETS.toLowerCase()) {
+      const net = rev + cost;     // current net
+      rev = rev - net;            // add net into revenue => net becomes 0
+      // cost same
+    }
+
+    // ✅ 3) Advertisement: make net profit ZERO by adding (-net) into Cost (Westwalk Contract)
+    if (compNameLower === C_ADV.toLowerCase()) {
+      const net = rev + cost;     // current net
+      cost = cost - net;          // add opposite in cost => net becomes 0
+      // rev same
     }
 
     return { totalRevenue: rev, totalCost: cost, netProfit: rev + cost };
@@ -182,6 +196,7 @@ const styles = StyleSheet.create({
   cost: { backgroundColor: "#FCE9E9" },
   net: { backgroundColor: "#FFF3D6" },
 });
+
 
 
 

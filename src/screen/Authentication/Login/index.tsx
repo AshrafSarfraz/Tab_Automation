@@ -52,9 +52,9 @@ export default function LoginScreen({ navigation }) {
       <TextInput placeholder="Password" secureTextEntry style={styles.input} onChangeText={setPassword} />
       <CustomButton title="Login" onPress={handleLogin} />
       {/* <CustomButton title="Forgot Password?" onPress={() => navigation.navigate('ForgotPassword')} /> */}
-       <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+       {/* <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
         <Text style={styles.signupText}>Don’t have an account? Sign up</Text>
-      </TouchableOpacity> 
+      </TouchableOpacity>  */}
     </View>
   );
 }
@@ -73,6 +73,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   input: {
+    
     backgroundColor: Colors.White,
     padding: 16,
     borderRadius: 10,
