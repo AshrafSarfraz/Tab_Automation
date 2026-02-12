@@ -86,7 +86,7 @@ export default function RfpCompaniesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.Bg },
 
-  header: { borderBottomWidth: 0.4, paddingBottom: 18 },
+  header: { borderBottomWidth: 0.4 },
 
   itemContainer: { width: CARD_WIDTH },
 

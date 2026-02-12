@@ -102,7 +102,6 @@ const styles = StyleSheet.create({
 
   header: {
     borderBottomWidth: 0.4,
-    paddingBottom: 18,
   },
 
   itemContainer: {

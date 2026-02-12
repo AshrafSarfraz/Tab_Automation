@@ -122,7 +122,6 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    paddingBottom: 16,
     borderBottomWidth: 0.4,
   },
 

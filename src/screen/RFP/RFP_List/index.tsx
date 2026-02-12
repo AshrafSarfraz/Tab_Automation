@@ -112,7 +112,7 @@ export default function RfpListByCompany({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.Bg },
 
-  header: { paddingBottom: 16, borderBottomWidth: 0.4 },
+  header: { borderBottomWidth: 0.4 },
 
   subtitle: {
     marginTop: 6,

@@ -373,7 +373,6 @@ export default function CsvUploadScreen() {
 
 const styles = StyleSheet.create({
   headerWrap: {
-    paddingBottom: 14,
     borderBottomWidth: 0.4,
     borderBottomColor: "#ddd",
   },

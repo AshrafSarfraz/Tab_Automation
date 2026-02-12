@@ -15,14 +15,16 @@ export default function CustomButton({ title, onPress, }: { title: string; onPre
 const styles = StyleSheet.create({
   button: {
     backgroundColor: Colors.PrimaryColor,
-    padding: 16,
+    paddingHorizontal: 20,
     borderRadius: 12,
     alignItems: 'center',
-    marginVertical: 8,
+    justifyContent:'center',
+    height:40,
+
   },
   text: {
     color: Colors.White,
-    fontSize: 18,
+    fontSize: 12,
     fontWeight: 'bold',
   },
 });
