@@ -23,7 +23,7 @@ import { exportTrialBalanceToXLSX } from "../../../../database/Utils/export_to_e
 
 // ======================= CONFIG =======================
 const { width } = Dimensions.get("window");
-const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DARK_GROUP_INDEX = new Set([0, 2, 4, 6, 8, 10]);
 
 const HEADER_HEIGHT = 44;
@@ -38,7 +38,7 @@ const LEFT_WIDTH = 570;
 
 // RIGHT
 const TOTAL_W = 100; // current total (A)
-const PREV_W  = 120; // previous year total (P)
+const PREV_W = 120; // previous year total (P)
 const BUDGET_TOTAL_W = 120; // budget total (B)
 const MONTH_W = 100;
 
@@ -46,6 +46,180 @@ const MONTH_W = 100;
 const CLUB_ACCOUNTS = new Set(["44104", "44107", "44122", "44124", "44125"]);
 const CLUB_ACCOUNTS_LABEL = "Tenant Variation Request";
 const CLUB_ACCOUNTS_ACCOUNT = "44104,44107,44122,44124,44125";
+
+// ✅ Westwalk companies condition
+const C_RE = "West Walk Real Estate";
+const C_ADV = "West Walk Advertisement";
+const C_ASSETS = "Assets Services Company";
+const WESTWALK_COMPANIES = new Set([C_RE, C_ADV, C_ASSETS]);
+
+// ✅ Company-wise Component Collapse/Expand Groups
+const COMPANY_COMPONENT_GROUPS: {
+  [companyName: string]: { label: string; components: Set<string> }[];
+} = {
+  "Uranus General Contracting Company WLL": [
+    {
+      label: "FM and Maintenance",
+      components: new Set([
+        "Maintenance Expenses",
+        "Facility Management Cost",
+        "Waste management services",
+        "Dewatering services",
+        "Electricity and utility charges",
+      ]),
+    },
+    {
+      label: "Professional fees and legal expenses",
+      components: new Set([
+        "Legal Fees",
+        "Other Professional Fees",
+        "Consultancy fees",
+        "Professional Fees - Tax",
+        "IT Outsourcing Services",
+        "Legal Expenses",
+        "Audit Fees",
+      ]),
+    },
+
+    { label: "Office admin expenses", components: new Set(["Travel Cost","Other Office Expenses"]) },
+    {
+      label: "Visa and government fees",
+      components: new Set(["Withholding Tax Expense", "Visa & Government Levies"]),
+    },
+    // { label: "Assets & Depreciation", components: new Set(["Assets Depreciation – Distribution"]) },
+    // { label: "Doubtful Debts", components: new Set(["Doubtful Debts"]) },
+    // { label: "Interest", components: new Set(["Interest on Doha Bank Loan"]) },
+    // { label: "Insurance", components: new Set(["Insurance Expenses"]) },
+    // { label: "Bank Charges", components: new Set(["Bank charges"]) },
+  ],
+
+  "AL WESSIL HOLDING": [
+   
+    {
+      label: "Other income",
+      components: new Set([
+        "Tenant Variation Request",
+        "Other Expense-Dewatering",
+        "Rental and commission income",
+        "Other Income - Murabaha Profit",
+        "Interest Income",
+        "Penalty fee - rent",
+        "Miscellaneous Income",
+      ]),
+    },
+    {
+      label: "Service fees income",
+      components: new Set([
+        "Service Fees",
+        "Other income - Short term investments",
+        "Interet Income on Related party Loan",
+        "Interest refund income",
+      ]),
+    },
+  
+    {
+      label: "Staff costs",
+      components: new Set([
+        "Salaries",
+        "Employee end of service benefits",
+        "Staff Welfare Payments",
+        "School Fees",
+        "Vacation Tickets",
+        "Leave Salary",
+      ]),
+    },
+    {
+      label: "General and admin",
+      components: new Set([
+        "Assets Depreciation - Furniture & Fixtures",
+        "Assets Depreciation - Office Equipments",
+        "Amortization of right of use asset",
+      ]),
+    },
+    {
+      label: "Finance costs",
+      components: new Set([
+        "Bank Charges",
+        "Bank Loan Commission",
+        "Interest on Doha Bank Loan",
+        "Interest on QIIB loans",
+        "Interest expense on lease liability",
+        "Interest on Arab Bank Loan",
+        "Interest on Dukhan Bank",
+        "Loan Administration Fee Expense",
+        "Interest On Commercial Bank",
+      ]),
+    },
+  
+    {
+      label: "Office expenses",
+      components: new Set([
+        "Other Office Expenses",
+        "Phone",
+        "Fax & Internet – GA",
+        "Printing & Stationery",
+        "GOSI Cost",
+        "Visa & Government Levies",
+        "Local Transport",
+        "Postage & Courier",
+        "Incentives",
+      ]),
+    },
+  
+    {
+      label: "Professional expenses",
+      components: new Set([
+        "Audit Fees",
+        "Other Professional Fees",
+        "IT Outsourcing Services",
+        "Insurance Expense",
+        "Consultancy fees",
+      ]),
+    },
+
+    {
+      label: "Utility charges",
+      components: new Set(["Electricity and utility charges", "Treated Sewage Effluent (TSE) supply"]),
+    },
+    { label: "Travel expenses", components: new Set(["Hotel Accommodation & Travel Cost", "Travel Cost"]) },
+    
+    
+    // { label: "QD Fees", components: new Set(["Late Payment Penalty QD-Fees"]) },
+    // { label: "Discounts to subdevelopers", components: new Set(["Discount on service to subdevelopers"]) },
+    // { label: "Tax expenses", components: new Set(["Withholding Tax Expense"]) },
+    // { label: "Selling expenses", components: new Set(["Sales Commission-Agents"]) },
+    // { label: "Expected credit losses", components: new Set(["Doubtful Debts"]) },
+    // { label: "Finance cost recharge", components: new Set(["Management Fee Income"]) },
+    // { label: "Foreign Exchange Gain", components: new Set(["Foreign Exchange Gain"]) },
+    // { label: "Dividend Income", components: new Set(["Dividend Income"]) },
+    // { label: "Dewatering expenses", components: new Set(["Dewatering services"]) },
+    // { label: "Cost of revenues", components: new Set(["Maintenance Cost - Al Wessil Lusail"]) },
+    // { label: "Board members fees", components: new Set(["Board Compensation"]) },
+    // { label: "Tax services", components: new Set(["Professional Fees – Tax"]) },
+    // { label: "Legal expenses", components: new Set(["Legal Fees"]) },
+    // { label: "Direct expenses", components: new Set(["Waste management services"]) },
+  ],
+};
+
+// ✅ company+component -> group label helper
+const getGroupLabelForCompanyComponent = (companyName: string, component?: string) => {
+  const cmp = String(companyName || "").trim();
+  const c = String(component || "").trim();
+
+  const groups = COMPANY_COMPONENT_GROUPS[cmp];
+  if (!groups) return c;
+
+  for (const g of groups) {
+    if (g.components.has(c)) return g.label;
+  }
+  return c;
+};
+
+// ✅ optional: used for forcing parent even if 1 child (mapped group)
+const isMappedCompanyComponent = (companyName: string, component?: string) => {
+  const c = String(component || "").trim();
+  return getGroupLabelForCompanyComponent(companyName, c) !== c;
+};
 
 // ======================= API/DB TYPES =======================
 type ApiRow = {
@@ -75,8 +249,8 @@ type TrialBalanceRow = {
   cc3code?: string;
   auxcode?: string;
 
-  balanceFirst?: number;     // A
-  budgetedAmount?: number;   // B
+  balanceFirst?: number; // A
+  budgetedAmount?: number; // B
   cc2?: string;
 };
 
@@ -85,14 +259,14 @@ type RowItem = TrialBalanceRow & {
   yearHeader?: boolean;
   totalType?: "Revenue" | "Cost" | "Grand";
 
-  totalBalances?: number[];         // A monthly
-  totalSum?: number;                // A total
+  totalBalances?: number[]; // A monthly
+  totalSum?: number; // A total
 
-  prevYearSum?: number;             // P total
-  prevMonthlyBalances?: number[];   // P monthly
+  prevYearSum?: number; // P total
+  prevMonthlyBalances?: number[]; // P monthly
 
-  budgetMonthly?: number[];         // B monthly
-  budgetSum?: number;               // B total
+  budgetMonthly?: number[]; // B monthly
+  budgetSum?: number; // B total
 
   isGroupParent?: boolean;
   groupKey?: string;
@@ -120,12 +294,6 @@ const normalize = (r: ApiRow): TrialBalanceRow => {
     cc2: String(r.cc2 || "").trim(),
   };
 };
-
-// ✅ Westwalk companies condition
-const C_RE = "West Walk Real Estate";
-const C_ADV = "West Walk Advertisement";
-const C_ASSETS = "Assets Services Company";
-const WESTWALK_COMPANIES = new Set([C_RE, C_ADV, C_ASSETS]);
 
 // ✅ extract rows from sqlite snapshot (handles both formats)
 const extractRowsFromSnap = (snap: any): ApiRow[] => {
@@ -191,8 +359,8 @@ export default function TrialBalanceTableScreen() {
 
   // ✅ RIGHT WIDTH changes by mode
   const rightContentWidth = isBudgetMode
-    ? (BUDGET_TOTAL_W + (12 * MONTH_W)) // Total(B) + 12 months(B)
-    : (TOTAL_W + PREV_W + BUDGET_TOTAL_W + (12 * (3 * MONTH_W))); // Total(A/P/B) + months(A/P/B)
+    ? BUDGET_TOTAL_W + 12 * MONTH_W // Total(B) + 12 months(B)
+    : TOTAL_W + PREV_W + BUDGET_TOTAL_W + 12 * (3 * MONTH_W); // Total(A/P/B) + months(A/P/B)
 
   const compParam = String(company || "").trim();
   const typeParam = String(type || "").trim();
@@ -204,8 +372,7 @@ export default function TrialBalanceTableScreen() {
   const [error, setError] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
-  const toggleGroup = (key: string) =>
-    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggleGroup = (key: string) => setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
   // sync scroll
   const leftListRef = useRef<FlatList<RowItem>>(null);
@@ -260,9 +427,7 @@ export default function TrialBalanceTableScreen() {
         }
 
         const isWestwalk = WESTWALK_COMPANIES.has(compParam);
-        const snap = isWestwalk
-          ? await getWestwalkMongoFromSQLite()
-          : await getOtherCmpMongoFromSQLite();
+        const snap = isWestwalk ? await getWestwalkMongoFromSQLite() : await getOtherCmpMongoFromSQLite();
 
         const rawRows = extractRowsFromSnap(snap);
 
@@ -463,9 +628,9 @@ export default function TrialBalanceTableScreen() {
           }
         });
 
-        const prevGrandMonthly = Array(12).fill(0).map(
-          (_, i) => (prevTotalsMonthlyByType.Revenue[i] || 0) + (prevTotalsMonthlyByType.Cost[i] || 0)
-        );
+        const prevGrandMonthly = Array(12)
+          .fill(0)
+          .map((_, i) => (prevTotalsMonthlyByType.Revenue[i] || 0) + (prevTotalsMonthlyByType.Cost[i] || 0));
         const prevGrandTotal = (prevTotalsByType.Revenue || 0) + (prevTotalsByType.Cost || 0);
 
         // ========== STRUCTURE ==========
@@ -482,19 +647,14 @@ export default function TrialBalanceTableScreen() {
           // ✅ KEY FIX + ✅ CLUBBING FIX
           const makeKey = (r: TrialBalanceRow) => {
             const acc = String(r.accountno || "").trim();
-            const code =
-              t === "Revenue"
-                ? String(r.cc3code || "").trim()
-                : String(r.auxcode || "").trim();
+            const code = t === "Revenue" ? String(r.cc3code || "").trim() : String(r.auxcode || "").trim();
 
-            // ✅ club these accounts into one "bucket" by cc3code
-            if (t === "Revenue" && CLUB_ACCOUNTS.has(acc)) {
+            // ✅ club these accounts into one "bucket" by cc3code (only westwalk)
+            if (t === "Revenue" && WESTWALK_COMPANIES.has(compParam) && CLUB_ACCOUNTS.has(acc)) {
               return `CLUB::${code}`;
             }
 
-            const cc2Part =
-              t === "Revenue" && compParam === C_RE ? String(r.cc2 || "").trim() : "";
-
+            const cc2Part = t === "Revenue" && compParam === C_RE ? String(r.cc2 || "").trim() : "";
             return `${acc}||${code}||${cc2Part}`;
           };
 
@@ -543,12 +703,7 @@ export default function TrialBalanceTableScreen() {
             const isClubbed = t === "Revenue" && String(k).startsWith("CLUB::");
 
             const finalBase: TrialBalanceRow = isClubbed
-              ? {
-                  ...base,
-                  component: CLUB_ACCOUNTS_LABEL,
-                  accountno: CLUB_ACCOUNTS_ACCOUNT,
-                  cc2: "",
-                }
+              ? { ...base, component: CLUB_ACCOUNTS_LABEL, accountno: CLUB_ACCOUNTS_ACCOUNT, cc2: "" }
               : base;
 
             unified.push({
@@ -565,17 +720,28 @@ export default function TrialBalanceTableScreen() {
             } as RowItem);
           });
 
+          // ✅ NEW: group by company-component label (collapse/expand buckets)
           const byComponent: Record<string, RowItem[]> = {};
+          const groupLabelByKey: Record<string, string> = {};
+
           unified.forEach((r) => {
-            const comp = String(r.component || "").trim();
-            const gk = `${yearParam}::${t}::${comp}`;
+            const rawComp = String(r.component || "").trim();
+            const groupLabel = getGroupLabelForCompanyComponent(compParam, rawComp);
+
+            const gk = `${yearParam}::${t}::${groupLabel}`;
             (byComponent[gk] ||= []).push(r);
+            groupLabelByKey[gk] = groupLabel;
           });
 
           const collapsed: RowItem[] = [];
 
           Object.entries(byComponent).forEach(([groupKey, arr]) => {
-            if (arr.length <= 1) {
+            const rawFirst = String(arr[0].component || "").trim();
+            const isMapped = isMappedCompanyComponent(compParam, rawFirst);
+
+            // ✅ if single AND not mapped => keep normal (no parent)
+            // ✅ if mapped => still create parent row (so user can expand)
+            if (arr.length <= 1 && !isMapped) {
               collapsed.push(arr[0]);
               return;
             }
@@ -590,12 +756,14 @@ export default function TrialBalanceTableScreen() {
               ch.prevMonthlyBalances?.forEach((v, i) => (sumP[i] += v));
             });
 
+            const groupLabel = groupLabelByKey[groupKey] || rawFirst;
+
             collapsed.push({
               isGroupParent: true,
               groupKey,
               type: t,
               company: compParam,
-              component: String(arr[0].component || "").trim(),
+              component: groupLabel, // ✅ parent label
               totalBalances: sumA,
               totalSum: sumArr(sumA),
               budgetMonthly: sumB,
@@ -603,7 +771,7 @@ export default function TrialBalanceTableScreen() {
               prevMonthlyBalances: sumP,
               prevYearSum: sumArr(sumP),
               year: yearParam,
-              children: arr,
+              children: arr, // ✅ children keep original component rows
             } as RowItem);
           });
 
@@ -661,11 +829,13 @@ export default function TrialBalanceTableScreen() {
         }
 
         // Grand / Net
-        const netBalancesA = Array(12).fill(0).map((_, i) => {
-          const rev = revenueCollapsed.reduce((s, r) => s + (r.totalBalances?.[i] || 0), 0);
-          const cst = costCollapsed.reduce((s, r) => s + (r.totalBalances?.[i] || 0), 0);
-          return rev + cst;
-        });
+        const netBalancesA = Array(12)
+          .fill(0)
+          .map((_, i) => {
+            const rev = revenueCollapsed.reduce((s, r) => s + (r.totalBalances?.[i] || 0), 0);
+            const cst = costCollapsed.reduce((s, r) => s + (r.totalBalances?.[i] || 0), 0);
+            return rev + cst;
+          });
 
         const netBudgetMonthly = revBudgetMonthly.map((v, i) => v + (costBudgetMonthly[i] || 0));
 
@@ -695,7 +865,9 @@ export default function TrialBalanceTableScreen() {
     };
 
     loadData();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [compParam, typeParam, yearParam]);
 
   // =================== RENDER HELPERS ===================
@@ -705,13 +877,12 @@ export default function TrialBalanceTableScreen() {
         {child.type}
       </Text>
 
-      {/* (Tumhara original display) */}
       <Text numberOfLines={1} style={[styles.cell, { width: COMP_W, color: "#333", textAlign: "left" }]}>
         {child.component}
       </Text>
 
       <Text numberOfLines={1} style={[styles.cell, { width: CODE_W, color: "#666", textAlign: "left" }]}>
-        {child.type === "Revenue" ? (child.cc3code || "") : (child.auxcode || "")}
+        {child.type === "Revenue" ? child.cc3code || "" : child.auxcode || ""}
       </Text>
     </View>
   );
@@ -779,9 +950,15 @@ export default function TrialBalanceTableScreen() {
   // =================== HEADERS ===================
   const LeftHeader = () => (
     <View style={[styles.headerRow, { width: 384, height: HEADER_HEIGHT, backgroundColor: "#EFEFEF" }]}>
-      <Text numberOfLines={1} style={[styles.cell, { width: TYPE_W, fontWeight: "bold" }]}>Type</Text>
-      <Text numberOfLines={1} style={[styles.cell, { width: COMP_W, fontWeight: "bold" }]}>Component</Text>
-      <Text numberOfLines={1} style={[styles.cell, { width: CODE_W, fontWeight: "bold" }]}>Code/Aux</Text>
+      <Text numberOfLines={1} style={[styles.cell, { width: TYPE_W, fontWeight: "bold" }]}>
+        Type
+      </Text>
+      <Text numberOfLines={1} style={[styles.cell, { width: COMP_W, fontWeight: "bold" }]}>
+        Component
+      </Text>
+      <Text numberOfLines={1} style={[styles.cell, { width: CODE_W, fontWeight: "bold" }]}>
+        Code/Aux
+      </Text>
     </View>
   );
 
@@ -805,7 +982,10 @@ export default function TrialBalanceTableScreen() {
           </>
         )}
 
-        <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold", textAlign: "center" }]}>
+        <Text
+          numberOfLines={1}
+          style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold", textAlign: "center" }]}
+        >
           Total (B)
         </Text>
 
@@ -855,13 +1035,13 @@ export default function TrialBalanceTableScreen() {
       return (
         <View>
           <View style={[styles.bodyRow, { backgroundColor: "#EFEFEF", width: LEFT_WIDTH, height: ROW_HEIGHT }]}>
-            <Text numberOfLines={1} style={[styles.cell, { width: TYPE_W, textAlign: "left" }]}>{item.type}</Text>
+            <Text numberOfLines={1} style={[styles.cell, { width: TYPE_W, textAlign: "left" }]}>
+              {item.type}
+            </Text>
 
             <View style={{ flexDirection: "row", width: COMP_W }}>
               <TouchableOpacity onPress={() => toggleGroup(key)} style={{ flexDirection: "row" }}>
-                <Text style={{ fontSize: 12, fontWeight: "bold", paddingRight: 8 }}>
-                  {isOpen ? "▾" : "▸"}
-                </Text>
+                <Text style={{ fontSize: 12, fontWeight: "bold", paddingRight: 8 }}>{isOpen ? "▾" : "▸"}</Text>
                 <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 12 }}>
                   {item.component}
                 </Text>
@@ -871,9 +1051,7 @@ export default function TrialBalanceTableScreen() {
             <Text numberOfLines={1} style={[styles.cell, { width: CODE_W, color: "#EFEFEF", textAlign: "left" }]} />
           </View>
 
-          {isOpen && item.children?.map((child, idx) => (
-            <LeftChildRow key={`LCH-${key}-${idx}`} child={child} />
-          ))}
+          {isOpen && item.children?.map((child, idx) => <LeftChildRow key={`LCH-${key}-${idx}`} child={child} />)}
         </View>
       );
     }
@@ -884,20 +1062,25 @@ export default function TrialBalanceTableScreen() {
       let MbTotal = 0;
       if (item.totalType === "Revenue") bgColor = "#d1f7d1";
       if (item.totalType === "Cost") bgColor = "#f7d1d1";
-      if (item.totalType === "Grand") { bgColor = "#ffe4b5"; MbTotal = 50; }
+      if (item.totalType === "Grand") {
+        bgColor = "#ffe4b5";
+        MbTotal = 50;
+      }
 
       return (
-        <View style={[
-          styles.bodyRow,
-          {
-            backgroundColor: bgColor,
-            borderTopWidth: 2,
-            borderColor: "#aaa",
-            width: LEFT_WIDTH,
-            height: ROW_HEIGHT,
-            marginBottom: MbTotal,
-          },
-        ]}>
+        <View
+          style={[
+            styles.bodyRow,
+            {
+              backgroundColor: bgColor,
+              borderTopWidth: 2,
+              borderColor: "#aaa",
+              width: LEFT_WIDTH,
+              height: ROW_HEIGHT,
+              marginBottom: MbTotal,
+            },
+          ]}
+        >
           <Text numberOfLines={1} style={[styles.cell, { width: TYPE_W, fontWeight: "bold", textAlign: "left" }]}>
             {label}
           </Text>
@@ -911,10 +1094,14 @@ export default function TrialBalanceTableScreen() {
 
     return (
       <View style={[styles.bodyRow, { width: LEFT_WIDTH, height: ROW_HEIGHT, backgroundColor: "#EFEFEF" }]}>
-        <Text numberOfLines={1} style={[styles.cell, { width: TYPE_W, textAlign: "left" }]}>{item.type}</Text>
-        <Text numberOfLines={1} style={[styles.cell, { width: COMP_W, textAlign: "left" }]}>{item.component}</Text>
+        <Text numberOfLines={1} style={[styles.cell, { width: TYPE_W, textAlign: "left" }]}>
+          {item.type}
+        </Text>
+        <Text numberOfLines={1} style={[styles.cell, { width: COMP_W, textAlign: "left" }]}>
+          {item.component}
+        </Text>
         <Text numberOfLines={1} style={[styles.cell, { width: CODE_W, textAlign: "left", color: "#666" }]}>
-          {item.type === "Revenue" ? (item.cc3code || "") : (item.auxcode || "")}
+          {item.type === "Revenue" ? item.cc3code || "" : item.auxcode || ""}
         </Text>
       </View>
     );
@@ -925,9 +1112,13 @@ export default function TrialBalanceTableScreen() {
       return <View style={[styles.yearHeaderRow, { width: rightContentWidth, height: YEAR_HEADER_HEIGHT }]} />;
     }
 
-    const renderBudgetMonths = (row: RowItem, weight?: "normal" | "bold" | "600", enableBanding: boolean = true) => {
+    const renderBudgetMonths = (
+      row: RowItem,
+      weight?: "normal" | "bold" | "600",
+      enableBanding: boolean = true
+    ) => {
       const bmon = row.budgetMonthly ?? Array(12).fill(0);
-      const cellWeight = weight === "bold" ? "bold" : (weight === "600" ? ("600" as any) : "normal");
+      const cellWeight = weight === "bold" ? "bold" : weight === "600" ? ("600" as any) : "normal";
 
       return months.map((_, i) => {
         const bodyCellStyle = [
@@ -944,14 +1135,17 @@ export default function TrialBalanceTableScreen() {
       });
     };
 
-    const renderTriplets = (row: RowItem, weight?: "normal" | "bold" | "600", enableBanding: boolean = true) => {
+    const renderTriplets = (
+      row: RowItem,
+      weight?: "normal" | "bold" | "600",
+      enableBanding: boolean = true
+    ) => {
       const cbals = row.totalBalances ?? Array(12).fill(0);
       const pmon = row.prevMonthlyBalances ?? Array(12).fill(0);
       const bmon = row.budgetMonthly ?? Array(12).fill(0);
 
       return months.map((_, i) => {
-        const cellWeight =
-          weight === "bold" ? "bold" : (weight === "600" ? ("600" as any) : "normal");
+        const cellWeight = weight === "bold" ? "bold" : weight === "600" ? ("600" as any) : "normal";
 
         const bodyCellStyle = [
           styles.cell,
@@ -1007,9 +1201,7 @@ export default function TrialBalanceTableScreen() {
             {isBudgetMode ? renderBudgetMonths(item, "600", true) : renderTriplets(item, "600", true)}
           </View>
 
-          {isOpen && item.children?.map((child, idx) => (
-            <RightChildRow key={`RCH-${key}-${idx}`} child={child} />
-          ))}
+          {isOpen && item.children?.map((child, idx) => <RightChildRow key={`RCH-${key}-${idx}`} child={child} />)}
         </View>
       );
     }
@@ -1019,17 +1211,28 @@ export default function TrialBalanceTableScreen() {
       let MbTotal = 0;
       if (item.totalType === "Revenue") bgColor = "#d1f7d1";
       if (item.totalType === "Cost") bgColor = "#f7d1d1";
-      if (item.totalType === "Grand") { bgColor = "#ffe4b5"; MbTotal = 50; }
+      if (item.totalType === "Grand") {
+        bgColor = "#ffe4b5";
+        MbTotal = 50;
+      }
 
       const totalA = Number(item.totalSum || 0);
       const totalP = Number(item.prevYearSum || 0);
       const totalB = Number(item.budgetSum || 0);
 
       return (
-        <View style={[
-          styles.bodyRow,
-          { backgroundColor: bgColor, borderTopWidth: 2, borderColor: "#aaa", height: ROW_HEIGHT, marginBottom: MbTotal },
-        ]}>
+        <View
+          style={[
+            styles.bodyRow,
+            {
+              backgroundColor: bgColor,
+              borderTopWidth: 2,
+              borderColor: "#aaa",
+              height: ROW_HEIGHT,
+              marginBottom: MbTotal,
+            },
+          ]}
+        >
           {!isBudgetMode && (
             <>
               <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W, fontWeight: "bold" }]}>
@@ -1107,7 +1310,7 @@ export default function TrialBalanceTableScreen() {
 
   return (
     <View style={styles.Container}>
-      <View style={{flexDirection:"row",justifyContent:'space-between',alignItems:"center", paddingRight:20,borderBottomWidth:1}}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingRight: 20, borderBottomWidth: 1 }}>
         <CustomHeader title={`${compParam} - ${yearParam}`} />
         <CustomButton
           title="Export"
@@ -1142,13 +1345,7 @@ export default function TrialBalanceTableScreen() {
           style={{ width: LEFT_WIDTH }}
         />
 
-        <ScrollView
-          ref={bodyHRef}
-          horizontal
-          onScroll={onBodyHScroll}
-          scrollEventThrottle={16}
-          showsHorizontalScrollIndicator
-        >
+        <ScrollView ref={bodyHRef} horizontal onScroll={onBodyHScroll} scrollEventThrottle={16} showsHorizontalScrollIndicator>
           <FlatList
             ref={rightListRef}
             data={data}
@@ -1219,11 +1416,6 @@ const styles = StyleSheet.create({
 
 
 
-
-
-
-
-
 // // TrialBalance.tsx
 // import React, { useEffect, useRef, useState } from "react";
 // import {
@@ -1267,6 +1459,11 @@ const styles = StyleSheet.create({
 // const PREV_W  = 120; // previous year total (P)
 // const BUDGET_TOTAL_W = 120; // budget total (B)
 // const MONTH_W = 100;
+
+// // ✅ CLUB ACCOUNTS (FIX)
+// const CLUB_ACCOUNTS = new Set(["44104", "44107", "44122", "44124", "44125"]);
+// const CLUB_ACCOUNTS_LABEL = "Tenant Variation Request";
+// const CLUB_ACCOUNTS_ACCOUNT = "44104,44107,44122,44124,44125";
 
 // // ======================= API/DB TYPES =======================
 // type ApiRow = {
@@ -1324,9 +1521,6 @@ const styles = StyleSheet.create({
 // const isValidMonth = (m?: number | null) => typeof m === "number" && m >= 1 && m <= 12;
 // const sumArr = (arr: number[]) => arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
 
-// const buildMatchKey = (t: string, acc: string, code: string) =>
-//   `${(t || "").toLowerCase()}||${acc || ""}||${code || ""}`;
-
 // const normalize = (r: ApiRow): TrialBalanceRow => {
 //   const type = String(r.accountType || "").trim();
 //   return {
@@ -1337,6 +1531,7 @@ const styles = StyleSheet.create({
 //     month: Number(r.month || 0),
 //     accountno: String(r.accountno || "").trim(),
 //     auxcode: String(r.auxcode || "").trim(),
+//     // ✅ be tolerant: some rows store cc3 vs cc3code
 //     cc3code: String(r.cc3 || r.cc3code || "").trim(),
 //     balanceFirst: Number(r.balanceFirst || 0),
 //     budgetedAmount: Number(r.budgetedAmount || 0),
@@ -1488,7 +1683,20 @@ const styles = StyleSheet.create({
 //           : await getOtherCmpMongoFromSQLite();
 
 //         const rawRows = extractRowsFromSnap(snap);
-//         const all = rawRows.map(normalize);
+
+//         // ✅ normalize
+//         let all = rawRows.map(normalize);
+
+//         // ✅ IMPORTANT FIX: cc2 sirf RE ke revenue me meaningful hai
+//         // baqi companies (assets/adv/others) me cc2 ko blank rakho taake keys match hon
+//         all = all.map((r) => {
+//           const cmp = String(r.company || "").trim();
+//           const t = String(r.type || "").trim();
+//           if (t === "Revenue" && cmp !== C_RE) {
+//             return { ...r, cc2: "" };
+//           }
+//           return r;
+//         });
 
 //         // ===== Base current/prev for selected company =====
 //         let curr = all.filter((r) => r.company === compParam && r.year === yearParam);
@@ -1497,7 +1705,7 @@ const styles = StyleSheet.create({
 //         // =========================================================
 //         // ✅ 1) TRANSFER INTO C_RE
 //         //   - Add ADV net profit as Revenue "Marketing Rights"
-//         //   - Add ASSETS net profit as Cost "FM COST"  (IMPORTANT: use NEGATIVE of net profit)
+//         //   - Add ASSETS net profit as Cost "FM COST"
 //         // =========================================================
 //         if (compParam === C_RE) {
 //           // ADV -> Marketing Rights (Revenue)
@@ -1533,7 +1741,7 @@ const styles = StyleSheet.create({
 //             cc2: "",
 //           }));
 
-//           // ASSETS -> FM COST (Cost) = -(assets net profit) so it behaves like a cost line
+//           // ASSETS -> FM COST (Cost)
 //           const assetsNetA = netProfitMonthlyRaw(all, C_ASSETS, yearParam);
 //           const assetsNetB = budgetNetProfitMonthlyRaw(all, C_ASSETS, yearParam);
 //           const assetsNetP = netProfitMonthlyRaw(all, C_ASSETS, prevYear);
@@ -1689,29 +1897,38 @@ const styles = StyleSheet.create({
 
 //           const keys = new Set<string>();
 
-//           const addKey = (r: TrialBalanceRow) => {
-//             const acc = String(r.accountno || "");
-//             const code = t === "Revenue" ? String(r.cc3code || "") : String(r.auxcode || "");
-//             keys.add(`${acc}||${code}`);
+//           // ✅ KEY FIX + ✅ CLUBBING FIX
+//           const makeKey = (r: TrialBalanceRow) => {
+//             const acc = String(r.accountno || "").trim();
+//             const code =
+//               t === "Revenue"
+//                 ? String(r.cc3code || "").trim()
+//                 : String(r.auxcode || "").trim();
+
+//             // ✅ club these accounts into one "bucket" by cc3code
+//             if (t === "Revenue" && WESTWALK_COMPANIES.has(compParam) && CLUB_ACCOUNTS.has(acc)) {
+//               return `CLUB::${code}`;
+//             }
+            
+//             const cc2Part =
+//               t === "Revenue" && compParam === C_RE ? String(r.cc2 || "").trim() : "";
+
+//             return `${acc}||${code}||${cc2Part}`;
 //           };
 
-//           rowsCurr.forEach(addKey);
-//           rowsPrev.forEach(addKey);
+//           rowsCurr.forEach((r) => keys.add(makeKey(r)));
+//           rowsPrev.forEach((r) => keys.add(makeKey(r)));
 
 //           const currByKey: Record<string, TrialBalanceRow[]> = {};
 //           const prevByKey: Record<string, TrialBalanceRow[]> = {};
 
 //           rowsCurr.forEach((r) => {
-//             const acc = String(r.accountno || "");
-//             const code = t === "Revenue" ? String(r.cc3code || "") : String(r.auxcode || "");
-//             const k = `${acc}||${code}`;
+//             const k = makeKey(r);
 //             (currByKey[k] ||= []).push(r);
 //           });
 
 //           rowsPrev.forEach((r) => {
-//             const acc = String(r.accountno || "");
-//             const code = t === "Revenue" ? String(r.cc3code || "") : String(r.auxcode || "");
-//             const k = `${acc}||${code}`;
+//             const k = makeKey(r);
 //             (prevByKey[k] ||= []).push(r);
 //           });
 
@@ -1740,8 +1957,20 @@ const styles = StyleSheet.create({
 //               prevP[idx] += Number(r.balanceFirst || 0);
 //             });
 
+//             // ✅ apply club label/accountno override
+//             const isClubbed = t === "Revenue" && String(k).startsWith("CLUB::");
+
+//             const finalBase: TrialBalanceRow = isClubbed
+//               ? {
+//                   ...base,
+//                   component: CLUB_ACCOUNTS_LABEL,
+//                   accountno: CLUB_ACCOUNTS_ACCOUNT,
+//                   cc2: "",
+//                 }
+//               : base;
+
 //             unified.push({
-//               ...base,
+//               ...finalBase,
 //               type: t,
 //               company: compParam,
 //               year: yearParam,
@@ -1893,9 +2122,12 @@ const styles = StyleSheet.create({
 //       <Text numberOfLines={1} style={[styles.cell, { width: TYPE_W, color: "#333", textAlign: "left" }]}>
 //         {child.type}
 //       </Text>
+
+//       {/* (Tumhara original display) */}
 //       <Text numberOfLines={1} style={[styles.cell, { width: COMP_W, color: "#333", textAlign: "left" }]}>
-//         {child.accountno} + {child.cc2}
+//         {child.component}
 //       </Text>
+
 //       <Text numberOfLines={1} style={[styles.cell, { width: CODE_W, color: "#666", textAlign: "left" }]}>
 //         {child.type === "Revenue" ? (child.cc3code || "") : (child.auxcode || "")}
 //       </Text>
@@ -2295,17 +2527,17 @@ const styles = StyleSheet.create({
 //     <View style={styles.Container}>
 //       <View style={{flexDirection:"row",justifyContent:'space-between',alignItems:"center", paddingRight:20,borderBottomWidth:1}}>
 //         <CustomHeader title={`${compParam} - ${yearParam}`} />
-//         <CustomButton title="Export"  onPress={async () => {  console.log('pressed XLSX export');
+//         <CustomButton
+//           title="Export"
+//           onPress={async () => {
 //             try {
-//               const p = await exportTrialBalanceToXLSX(
-//                 data,
-//                 `TrialBalance_${company || 'All'}`
-//               );
-//               console.log('✅ file saved at:', p);
+//               const p = await exportTrialBalanceToXLSX(data, `TrialBalance_${company || "All"}`);
+//               console.log("✅ file saved at:", p);
 //             } catch (e: any) {
-//               console.warn('❌ XLSX export failed:', e?.message ?? e);
+//               console.warn("❌ XLSX export failed:", e?.message ?? e);
 //             }
-//           }}/> 
+//           }}
+//         />
 //       </View>
 
 //       <View style={{ flexDirection: "row" }}>
@@ -2400,6 +2632,7 @@ const styles = StyleSheet.create({
 //     backgroundColor: "#EFEFEF",
 //   },
 // });
+
 
 
 
