@@ -156,7 +156,7 @@ const COMPANY_COMPONENT_GROUPS: {
       components: new Set([
         "Other Office Expenses",
         "Phone",
-        "Fax & Internet – GA",
+        "Phone, Fax & Internet - GA",
         "Printing & Stationery",
         "GOSI Cost",
         "Visa & Government Levies",
@@ -1411,6 +1411,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFEFEF",
   },
 });
+
+
+
 
 
 

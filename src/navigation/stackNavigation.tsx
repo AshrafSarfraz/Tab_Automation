@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, {useEffect, useState} from 'react';
+import {NavigationContainer} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
-import { ActivityIndicator, View } from 'react-native';
+import {ActivityIndicator, View} from 'react-native';
 import LoginScreen from '../screen/Authentication/Login';
 import ForgotPasswordScreen from '../screen/Authentication/ForgetScreen';
 import SignupScreen from '../screen/Authentication/Signup';
@@ -13,27 +13,21 @@ import WebViewScreen from '../screen/LPO/WebView';
 import CompanyLpo from '../screen/LPO/companies';
 
 
-
 // import Ceo_Dashboard from '../screen/Reports/CmpDashboard/main_dashboard';
 // import SelectedCompany from '../screen/Reports/CmpDashboard/SelectedCompany';
 // import CmpDashboard from '../screen/Reports/CmpDashboard/companyDashboard';
 // import Detect_Data from '../screen/Reports/Westwalk';
-import RFPListScreen from '../screen/RFP/RFP_List';
+
+
 import ReportSelection from '../screen/Reports/reportSelection';
 import mainDashboard from '../screen/Reports/Performance_Report/mainDashboard';
-
-
-
-
 import Trial from '../screen';
 import TrialBalanceTableScreen from '../screen/Reports/Performance_Report/DetailsScreen';
 import CsvUploadScreen from '../screen/Reports/budgted/uploadData';
 import BudgtedDashboard from '../screen/Reports/budgted/budgetedDashboard';
 import RfpCompaniesScreen from '../screen/RFP/RFP_Companies';
 import RfpListByCompany from '../screen/RFP/RFP_List';
-
-
-
+import GroupMonthlySummaryScreen from '../screen/Reports/Performance_Report/GroupReport';
 
 const Stack = createNativeStackNavigator();
 
@@ -51,7 +45,7 @@ const StackNavigation = () => {
 
   if (!initialRoute) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
         <ActivityIndicator size="large" color="#31386A" />
       </View>
     );
@@ -59,9 +53,12 @@ const StackNavigation = () => {
 
   return (
     <NavigationContainer>
-     <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
-      {/* <Stack.Navigator initialRouteName={'Westwalk'} screenOptions={{ headerShown: false }}>  */}
-        
+      <Stack.Navigator
+        initialRouteName={initialRoute}
+        screenOptions={{headerShown: false}}>
+
+        {/* <Stack.Navigator initialRouteName={'Westwalk'} screenOptions={{ headerShown: false }}>  */}
+
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
@@ -72,28 +69,21 @@ const StackNavigation = () => {
         <Stack.Screen name="RfpListByCompany" component={RfpListByCompany} />
         <Stack.Screen name="WebView" component={WebViewScreen} />
         <Stack.Screen name="ReportSelection" component={ReportSelection} />
-      
+        
         <Stack.Screen name="mainDashboard" component={mainDashboard} />
-        <Stack.Screen name="TrialBalanceTable" component={TrialBalanceTableScreen} />
+        <Stack.Screen name="TrialBalanceTable"  component={TrialBalanceTableScreen} />
 
         <Stack.Screen name="BudgtedDashboard" component={BudgtedDashboard} />
-        <Stack.Screen name="BudgtedTrialBalanceTable" component={TrialBalanceTableScreen} />
+        <Stack.Screen name="BudgtedTrialBalanceTable"  component={TrialBalanceTableScreen} />
+       
         <Stack.Screen name="Csvupload" component={CsvUploadScreen} />
+        <Stack.Screen name="GroupMonthlySummaryScreen"   component={GroupMonthlySummaryScreen} />
 
         {/* <Stack.Screen name="Ceo_Dashboard" component={Ceo_Dashboard} />
         <Stack.Screen name="CmpDashboard" component={CmpDashboard} />
         <Stack.Screen name="SelectedCompany" component={SelectedCompany} /> */}
-        
-     
+
         <Stack.Screen name="Trial" component={Trial} />
-       
-  
-  
-
-
-    
-
-       
       </Stack.Navigator>
     </NavigationContainer>
   );
