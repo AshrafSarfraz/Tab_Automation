@@ -1,7 +1,7 @@
 
 
 import React from "react";
-import { StyleSheet, View, useWindowDimensions,Image, TouchableOpacity, Linking, Alert, ImageBackground } from "react-native";
+import { StyleSheet, View, TouchableOpacity, Linking, Alert, ImageBackground } from "react-native";
 import ButtonCard from "../../../component/cardBtn/buttonCard";
 import { Budget, Cashflow, homeLogo, Reports, RFP } from "../../../themes/images";
 import Container from "../../../ui/useLayout";

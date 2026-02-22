@@ -13,10 +13,6 @@ import WebViewScreen from '../screen/LPO/WebView';
 import CompanyLpo from '../screen/LPO/companies';
 
 
-// import Ceo_Dashboard from '../screen/Reports/CmpDashboard/main_dashboard';
-// import SelectedCompany from '../screen/Reports/CmpDashboard/SelectedCompany';
-// import CmpDashboard from '../screen/Reports/CmpDashboard/companyDashboard';
-// import Detect_Data from '../screen/Reports/Westwalk';
 
 
 import ReportSelection from '../screen/Reports/reportSelection';
@@ -79,10 +75,7 @@ const StackNavigation = () => {
         <Stack.Screen name="Csvupload" component={CsvUploadScreen} />
         <Stack.Screen name="GroupMonthlySummaryScreen"   component={GroupMonthlySummaryScreen} />
 
-        {/* <Stack.Screen name="Ceo_Dashboard" component={Ceo_Dashboard} />
-        <Stack.Screen name="CmpDashboard" component={CmpDashboard} />
-        <Stack.Screen name="SelectedCompany" component={SelectedCompany} /> */}
-
+   
         <Stack.Screen name="Trial" component={Trial} />
       </Stack.Navigator>
     </NavigationContainer>

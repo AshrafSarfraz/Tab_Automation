@@ -19,8 +19,7 @@ import MyText from '../../ui/AppText';
 import {homeLogo, LPO, Reports, RFP} from '../../themes/images';
 import ButtonCard from '../../component/cardBtn/buttonCard';
 import {clearWestwalkMongoTable, syncWestwalkMongoFromApi} from '../../database/westwalkTrailBal';
-import { clearOtherCmpMongoTable, syncOtherCmpMongoFromApi } from '../../database/otherCmpTrailBal';
-import { clearBudgetedTable, syncBudgetedFromApi } from '../../database/budgetedData';
+
 
 
 
@@ -80,8 +79,6 @@ export default function HomeScreen() {
       
         await Promise.all([
           syncWestwalkMongoFromApi(),
-          syncOtherCmpMongoFromApi(),
-          syncBudgetedFromApi(),
         ]);
       
         setSyncing(false);
@@ -112,14 +109,10 @@ export default function HomeScreen() {
   
       await Promise.all([
         clearWestwalkMongoTable(),
-        clearOtherCmpMongoTable(),
-        clearBudgetedTable(),
       ]);
       
       await Promise.all([
         syncWestwalkMongoFromApi(),
-        syncOtherCmpMongoFromApi(),
-        syncBudgetedFromApi(),
       ]);
       // ✅ Fetch fresh API data
       await loadData(false, true);
@@ -137,8 +130,7 @@ export default function HomeScreen() {
       await AsyncStorage.clear();
       await Promise.all([
         clearWestwalkMongoTable(),
-        clearOtherCmpMongoTable(),
-        clearBudgetedTable(),
+        
       ]);
       
     } catch (e: any) {

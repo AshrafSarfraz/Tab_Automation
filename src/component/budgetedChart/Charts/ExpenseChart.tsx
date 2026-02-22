@@ -1,17 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
-import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal";
-import { getOtherCmpMongoFromSQLite } from "../../../database/otherCmpTrailBal";
+
 import GroupedBarChart2 from "../GroupBarChart";
+import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal"; // ✅ ONLY ONE API
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// NOTE:
+// If your budgetedAmount for cost is already POSITIVE, set FLIP_SIGN = 1
+// If it is stored negative and you want it as positive in chart, keep -1
 const FLIP_SIGN = -1;
+
 const isCost = (r) => String(r.accountType || "").trim().toLowerCase() === "cost";
 
 function budgetExpenseByMonth(rows, company, year) {
   const out = Array(12).fill(0);
 
-  for (const r of rows) {
+  for (const r of rows || []) {
     if (String(r.company || "").trim() !== String(company || "").trim()) continue;
     if (Number(r.year) !== Number(year)) continue;
     if (!isCost(r)) continue;
@@ -21,6 +26,7 @@ function budgetExpenseByMonth(rows, company, year) {
 
     out[m - 1] += Number(r.budgetedAmount || 0) * FLIP_SIGN;
   }
+
   return out;
 }
 
@@ -31,12 +37,6 @@ function niceMaxValue(max, expandChart) {
   const step = expandChart ? 2_000_000 : 1_000_000;
   return Math.ceil(withHeadroom / step) * step;
 }
-
-const WESTWALK_COMPANIES = new Set([
-  "West Walk Real Estate",
-  "West Walk Advertisement",
-  "Assets Services Company",
-]);
 
 export default function BudgetExpenseChart({
   company,
@@ -58,10 +58,8 @@ export default function BudgetExpenseChart({
         setLoading(true);
         setError("");
 
-        const isWestwalk = WESTWALK_COMPANIES.has(String(company).trim());
-        const result = isWestwalk
-          ? await getWestwalkMongoFromSQLite()
-          : await getOtherCmpMongoFromSQLite();
+        // ✅ SINGLE API CALL (must return ALL companies combined)
+        const result = await getWestwalkMongoFromSQLite();
 
         const data =
           result?.data?.data ||
@@ -84,11 +82,13 @@ export default function BudgetExpenseChart({
   }, [company, year]);
 
   const chartData = useMemo(() => {
-    const isWestWalk = String(company).trim() === "West Walk Real Estate";
+    const isWestWalkRE = String(company).trim() === "West Walk Real Estate";
 
+    // ✅ Only Budget Cost (selected company)
     let budgetMain = budgetExpenseByMonth(rows, company, year);
 
-    if (isWestWalk) {
+    // ✅ WestWalk RE view: add Advertisement + Assets cost budget also
+    if (isWestWalkRE) {
       const addCompanies = ["West Walk Advertisement", "Assets Services Company"];
       for (const c of addCompanies) {
         const b = budgetExpenseByMonth(rows, c, year);
@@ -108,21 +108,29 @@ export default function BudgetExpenseChart({
   );
 
   const usedWidth =
-    expandChart ? (isSidebarCollapsed ? 1030 : 930) : (isSidebarCollapsed ? 500 : 440);
+    expandChart
+      ? (isSidebarCollapsed ? 1030 : 930)
+      : (isSidebarCollapsed ? 500 : 440);
 
-  // ✅ single bar -> thoda wider so months fit nicely
   const usedBarWidth =
-    expandChart ? (isSidebarCollapsed ? 11 : 10) : (isSidebarCollapsed ? 6 : 6);
+    expandChart
+      ? (isSidebarCollapsed ? 11 : 10)
+      : (isSidebarCollapsed ? 6 : 6);
 
   const usedBarGap = 0;
+
   const usedGroupGap =
-    expandChart ? (isSidebarCollapsed ? 28 : 25) : (isSidebarCollapsed ? groupGap : 2);
+    expandChart
+      ? (isSidebarCollapsed ? 28 : 25)
+      : (isSidebarCollapsed ? groupGap : 2);
 
   const showValuesOnTop = expandChart;
 
   const dynamicMaxValue = useMemo(() => {
     let m = 0;
-    for (const row of chartData) m = Math.max(m, Number(row.budgetMain || 0));
+    for (const row of chartData) {
+      m = Math.max(m, Number(row.budgetMain || 0));
+    }
     return niceMaxValue(m, expandChart);
   }, [chartData, expandChart]);
 
@@ -144,7 +152,7 @@ export default function BudgetExpenseChart({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Budget Expense</Text>
+      <Text style={styles.title}>Expense (Budget)</Text>
 
       <View style={{ width: usedWidth }}>
         <GroupedBarChart2
@@ -155,8 +163,8 @@ export default function BudgetExpenseChart({
           barWidth={usedBarWidth}
           barGap={usedBarGap}
           groupGap={usedGroupGap}
-          showValuesOnTop={showValuesOnTop}
           showLegend
+          showValuesOnTop={showValuesOnTop}
           yAxisOffset={-45}
           valueFormatter={(v) =>
             `${(v / 1_000_000)
@@ -164,7 +172,7 @@ export default function BudgetExpenseChart({
               .replace(/\.00$/, "")
               .replace(/(\.\d)0$/, "$1")}M`
           }
-          labelStyle={{ fontSize: 9 }} // optional
+          labelStyle={{ fontSize: 9 }}
         />
       </View>
     </View>

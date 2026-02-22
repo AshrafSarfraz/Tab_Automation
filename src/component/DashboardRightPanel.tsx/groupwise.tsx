@@ -6,12 +6,6 @@ import {
   ScrollView,
 } from "react-native";
 import { Colors } from "../../themes/color";
-import PnLSummaryCards from "../companyCard";
-import NetProfitChart from "../Charts/NetProfitChart";
-import RevenueChart from "../Charts/RevenueCharts";
-import ExpenseChart from "../Charts/ExpenseChart";
-import RevenueCostNetProfitLineChart from "../Charts/linechart";
-import AllCompaniesPnLTableScreen from "../../screen/Reports/Performance_Report/GroupReport";
 import GroupMonthlySummaryScreen from "../companyCard/groupReportCard";
 import GroupRevenueChart from "../groupReportChart/groupRevenue";
 import GroupExpenseChart from "../groupReportChart/groupExpense";

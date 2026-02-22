@@ -11,8 +11,7 @@ import {
   NativeScrollEvent,
 } from "react-native";
 
-import { getWestwalkMongoFromSQLite } from "../../../../database/westwalkTrailBal";
-import { getOtherCmpMongoFromSQLite } from "../../../../database/otherCmpTrailBal";
+import { getWestwalkMongoFromSQLite } from "../../../../database/westwalkTrailBal"; // ✅ ONLY ONE API
 import { Colors } from "../../../../themes/color";
 import CustomHeader from "../../../../component/customHeader";
 
@@ -36,7 +35,7 @@ const PREV_W = 110;
 const MONTH_W = 100;
 const rightContentWidth = TOTAL_W + PREV_W + 12 * (2 * MONTH_W);
 
-// Westwalk companies
+// Westwalk companies (logic stays same)
 const C_RE = "West Walk Real Estate";
 const C_ADV = "West Walk Advertisement";
 const C_ASSETS = "Assets Services Company";
@@ -47,10 +46,8 @@ type ApiRow = {
   month?: number;
   balanceFirst?: number;
   accountType?: string; // Revenue/Cost from backend
-  // (other fields may exist, ignored)
 };
 
-// ✅ same normalized shape as TB screen
 type TrialBalanceRow = {
   type: "Revenue" | "Cost" | string;
   company: string;
@@ -63,13 +60,13 @@ type TrialBalanceRow = {
 type RowItem = {
   yearHeader?: boolean;
 
-  type?: "Revenue" | "Cost" | string; // left col
+  type?: "Revenue" | "Cost" | string;
   company?: string;
 
-  totalBalances?: number[];           // 12 months A
-  totalSum?: number;                  // Total(A)
-  prevMonthlyBalances?: number[];     // 12 months P
-  prevYearSum?: number;               // Total(P)
+  totalBalances?: number[];
+  totalSum?: number;
+  prevMonthlyBalances?: number[];
+  prevYearSum?: number;
 
   isTotalRow?: boolean;
   totalType?: "Revenue" | "Cost" | "Grand";
@@ -78,30 +75,37 @@ type RowItem = {
 const isValidMonth = (m?: number | null) => typeof m === "number" && m >= 1 && m <= 12;
 const sumArr = (arr: number[]) => arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
 
-// ✅ same snapshot extractor as TB
+// ✅ extractor (handles both formats)
 const extractRowsFromSnap = (snap: any): ApiRow[] => {
   const payload = snap?.data;
+
+  // axios-like { data: { data: [...] } }
+  if (payload?.data && Array.isArray(payload.data)) return payload.data;
+
+  // axios-like { data: [...] }
   if (Array.isArray(payload)) return payload;
-  if (payload && Array.isArray(payload.data)) return payload.data;
+
+  // direct { data: [...] }
+  if (snap?.data && Array.isArray(snap.data)) return snap.data;
+
+  // direct [...]
   if (Array.isArray(snap)) return snap;
-  if (snap && Array.isArray(snap.data)) return snap.data;
+
   return [];
 };
 
-// ✅ normalize like your TB screen (type becomes "Revenue"/"Cost")
 const normalize = (r: ApiRow): TrialBalanceRow => {
   const t = String(r.accountType || "").trim();
   return {
-    type: (t === "Revenue" || t === "Cost") ? t : (t || ""),
+    type: t === "Revenue" || t === "Cost" ? t : t || "",
     company: String(r.company || "").trim(),
     year: Number(r.year || 0),
     month: Number(r.month || 0),
     balanceFirst: Number(r.balanceFirst || 0),
-    cc2: "", // we will set/blank consistently below
+    cc2: "",
   };
 };
 
-// monthly sum by company+type+year (normalized)
 const sumMonthly = (all: TrialBalanceRow[], company: string, year: number, type: "Revenue" | "Cost") => {
   const out = Array(12).fill(0);
   for (const r of all) {
@@ -109,7 +113,6 @@ const sumMonthly = (all: TrialBalanceRow[], company: string, year: number, type:
     if (r.year !== year) continue;
     if (!isValidMonth(r.month)) continue;
     if (r.type !== type) continue;
-
     out[r.month - 1] += Number(r.balanceFirst || 0);
   }
   return out;
@@ -174,27 +177,22 @@ export default function AllCompaniesPnLTableScreen() {
         setLoading(true);
         setError(null);
 
-        // ✅ load both snapshots
-        const [snapW, snapO] = await Promise.all([
-          getWestwalkMongoFromSQLite(),
-          getOtherCmpMongoFromSQLite(),
-        ]);
+        // ✅ SINGLE API CALL (must return ALL companies from Trailbalance)
+        const snap = await getWestwalkMongoFromSQLite();
+        const raw = extractRowsFromSnap(snap);
 
-        const raw = [...extractRowsFromSnap(snapW), ...extractRowsFromSnap(snapO)];
-
-        // ✅ normalize (same spirit as TB)
         let all = raw.map(normalize);
 
-        // ✅ keep only target year + prev year
+        // keep only year + prev
         all = all.filter((r) => r.year === yearParam || r.year === prevYear);
 
-        // ✅ TB consistency rule: Revenue rows for non-RE => cc2 blank
+        // TB consistency
         all = all.map((r) => {
           if (r.type === "Revenue" && r.company !== C_RE) return { ...r, cc2: "" };
           return r;
         });
 
-        // ✅ unique companies
+        // unique companies
         const map = new Map<string, string>();
         all.forEach((r) => {
           const c = String(r.company || "").trim();
@@ -208,14 +206,12 @@ export default function AllCompaniesPnLTableScreen() {
         const costRows: RowItem[] = [];
 
         for (const cmp of companies) {
-          // base monthly totals
           let revA = sumMonthly(all, cmp, yearParam, "Revenue");
           let costA = sumMonthly(all, cmp, yearParam, "Cost");
           let revP = sumMonthly(all, cmp, prevYear, "Revenue");
           let costP = sumMonthly(all, cmp, prevYear, "Cost");
 
-          // ✅ Westwalk consolidation logic (match your TB approach)
-          // RE gets ADV net into Revenue, ASSETS net into Cost
+          // ✅ Westwalk consolidation
           if (cmp === C_RE) {
             const advNetA = netMonthly(all, C_ADV, yearParam);
             const advNetP = netMonthly(all, C_ADV, prevYear);
@@ -224,27 +220,21 @@ export default function AllCompaniesPnLTableScreen() {
 
             revA = revA.map((v, i) => v + (advNetA[i] || 0));
             revP = revP.map((v, i) => v + (advNetP[i] || 0));
-
             costA = costA.map((v, i) => v + (assetsNetA[i] || 0));
             costP = costP.map((v, i) => v + (assetsNetP[i] || 0));
           }
 
-          // ASSETS offset to make net = 0 (like your TB offsets)
+          // ✅ offsets (same logic)
           if (cmp.toLowerCase() === C_ASSETS.toLowerCase()) {
             const netA = revA.map((v, i) => v + (costA[i] || 0));
             const netP = revP.map((v, i) => v + (costP[i] || 0));
-
-            // subtract net from revenue (equivalent to adding offset revenue line)
             revA = revA.map((v, i) => v - (netA[i] || 0));
             revP = revP.map((v, i) => v - (netP[i] || 0));
           }
 
-          // ADV offset to make net = 0
           if (cmp.toLowerCase() === C_ADV.toLowerCase()) {
             const netA = revA.map((v, i) => v + (costA[i] || 0));
             const netP = revP.map((v, i) => v + (costP[i] || 0));
-
-            // subtract net from cost (equivalent to adding offset cost line)
             costA = costA.map((v, i) => v - (netA[i] || 0));
             costP = costP.map((v, i) => v - (netP[i] || 0));
           }
@@ -289,7 +279,6 @@ export default function AllCompaniesPnLTableScreen() {
         const structured: RowItem[] = [];
         structured.push({ yearHeader: true, company: `All Companies`, type: "" } as any);
 
-        // Revenue
         structured.push(...revenueRows);
         structured.push({
           isTotalRow: true,
@@ -302,7 +291,6 @@ export default function AllCompaniesPnLTableScreen() {
           prevYearSum: sumArr(revTotalP),
         });
 
-        // Cost
         structured.push(...costRows);
         structured.push({
           isTotalRow: true,
@@ -315,7 +303,6 @@ export default function AllCompaniesPnLTableScreen() {
           prevYearSum: sumArr(costTotalP),
         });
 
-        // Net Profit
         structured.push({
           isTotalRow: true,
           totalType: "Grand",
@@ -339,27 +326,18 @@ export default function AllCompaniesPnLTableScreen() {
     };
 
     load();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
-  // headers
   const LeftHeader = () => (
-    <View style={[styles.headerRow, { width:380, height: HEADER_HEIGHT, backgroundColor: "#EFEFEF" }]}>
+    <View style={[styles.headerRow, { width: 380, height: HEADER_HEIGHT, backgroundColor: "#EFEFEF" }]}>
       <Text style={[styles.cell, { width: TYPE_W, fontWeight: "bold", textAlign: "left" }]}>Type</Text>
       <Text style={[styles.cell, { width: COMP_W, fontWeight: "bold", textAlign: "left" }]}>Company</Text>
     </View>
   );
 
   const RightHeader = () => (
-    <ScrollView
-      ref={headerHRef}
-      horizontal
-      onScroll={onHeaderHScroll}
-      scrollEventThrottle={16}
-      showsHorizontalScrollIndicator
-    >
+    <ScrollView ref={headerHRef} horizontal onScroll={onHeaderHScroll} scrollEventThrottle={16} showsHorizontalScrollIndicator>
       <View style={[styles.headerRow, { width: rightContentWidth, height: HEADER_HEIGHT, backgroundColor: "#fff" }]}>
         <Text style={[styles.cell, { width: TOTAL_W, fontWeight: "bold" }]}>Total (A)</Text>
         <Text style={[styles.cell, { width: PREV_W, fontWeight: "bold" }]}>Total (P)</Text>
@@ -385,9 +363,7 @@ export default function AllCompaniesPnLTableScreen() {
     if (item.yearHeader) {
       return (
         <View style={[styles.yearHeaderRow, { width: LEFT_WIDTH, height: YEAR_HEADER_HEIGHT }]}>
-          <Text style={{ fontWeight: "bold", fontSize: 12, color: "white" }}>
-            All Companies - {yearParam}
-          </Text>
+          <Text style={{ fontWeight: "bold", fontSize: 12, color: "white" }}>All Companies - {yearParam}</Text>
         </View>
       );
     }
@@ -425,7 +401,6 @@ export default function AllCompaniesPnLTableScreen() {
     const totalA = item.totalSum ?? sumArr(a);
     const totalP = item.prevYearSum ?? sumArr(p);
 
-    // ✅ background for totals
     let bgColor = "#fff";
     let mb = 0;
     let weight: any = "normal";
@@ -438,7 +413,6 @@ export default function AllCompaniesPnLTableScreen() {
       if (item.totalType === "Grand") { bgColor = "#ffe4b5"; mb = 50; }
     }
 
-    // ✅ IMPORTANT: remove silver banding from total rows
     const shouldBand = !isTotal;
 
     return (
@@ -450,9 +424,7 @@ export default function AllCompaniesPnLTableScreen() {
           const cellStyle = [
             styles.cell,
             { width: MONTH_W, fontWeight: weight, paddingVertical: 6 },
-            // ✅ apply banding only on non-total rows
             shouldBand && DARK_GROUP_INDEX.has(i) && styles.darkBodyCell,
-            // ✅ for totals force same bg as row (no grey blocks)
             isTotal && { backgroundColor: bgColor },
           ];
           return (
@@ -467,19 +439,11 @@ export default function AllCompaniesPnLTableScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.PrimaryColor} />
-      </View>
-    );
+    return <View style={styles.centered}><ActivityIndicator size="large" color={Colors.PrimaryColor} /></View>;
   }
 
   if (error) {
-    return (
-      <View style={styles.centered}>
-        <Text style={{ color: "red", fontWeight: "700", textAlign: "center" }}>{error}</Text>
-      </View>
-    );
+    return <View style={styles.centered}><Text style={{ color: "red", fontWeight: "700", textAlign: "center" }}>{error}</Text></View>;
   }
 
   return (

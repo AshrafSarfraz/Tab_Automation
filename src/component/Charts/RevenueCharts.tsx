@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import GroupedBarChart from "./GroupBarChart";
-import { getWestwalkMongoFromSQLite } from "../../database/westwalkTrailBal";
-import { getOtherCmpMongoFromSQLite } from "../../database/otherCmpTrailBal";
+import { getWestwalkMongoFromSQLite } from "../../database/westwalkTrailBal"; // ✅ single API
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const FLIP_SIGN = -1; // cost ko positive banane ke liye
+const FLIP_SIGN = -1;
 
 function isRevenue(r) {
   return String(r.accountType || "").trim().toLowerCase() === "revenue";
@@ -14,10 +13,8 @@ function isCost(r) {
   return String(r.accountType || "").trim().toLowerCase() === "cost";
 }
 
-// ✅ Normal company revenue
 function sumRevenueByMonth(rows, company, year) {
   const out = Array(12).fill(0);
-
   for (const r of rows) {
     if (String(r.company || "").trim() !== String(company || "").trim()) continue;
     if (Number(r.year) !== Number(year)) continue;
@@ -25,17 +22,13 @@ function sumRevenueByMonth(rows, company, year) {
 
     const m = Number(r.month);
     if (!m || m < 1 || m > 12) continue;
-
     out[m - 1] += Number(r.balanceFirst || 0);
   }
-
   return out;
 }
 
-// ✅ Company cost
 function sumCostByMonth(rows, company, year) {
   const out = Array(12).fill(0);
-
   for (const r of rows) {
     if (String(r.company || "").trim() !== String(company || "").trim()) continue;
     if (Number(r.year) !== Number(year)) continue;
@@ -43,17 +36,13 @@ function sumCostByMonth(rows, company, year) {
 
     const m = Number(r.month);
     if (!m || m < 1 || m > 12) continue;
-
-    // cost ko positive banane ke liye flip
     out[m - 1] += Number(r.balanceFirst || 0) * FLIP_SIGN;
   }
-
   return out;
 }
 
 function budgetRevenueByMonth(rows, company, year) {
   const out = Array(12).fill(0);
-
   for (const r of rows) {
     if (String(r.company || "").trim() !== String(company || "").trim()) continue;
     if (Number(r.year) !== Number(year)) continue;
@@ -61,14 +50,11 @@ function budgetRevenueByMonth(rows, company, year) {
 
     const m = Number(r.month);
     if (!m || m < 1 || m > 12) continue;
-
     out[m - 1] += Number(r.budgetedAmount || 0);
   }
-
   return out;
 }
 
-// ✅ dynamic max
 function niceMaxValue(max, expandChart) {
   if (!Number.isFinite(max) || max <= 0) return 1;
   const headroom = expandChart ? 1.2 : 1.1;
@@ -90,81 +76,41 @@ export default function RevenueChart({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // useEffect(() => {
-  //   let mounted = true;
-
-  //   const loadFromSQLite = async () => {
-  //     try {
-  //       setLoading(true);
-  //       setError("");
-
-  //       const result = await getWestwalkMongoFromSQLite();
-  //       const data = result?.data?.data || [];
-
-  //       if (mounted) setRows(Array.isArray(data) ? data : []);
-  //     } catch (e) {
-  //       if (mounted) {
-  //         setError(e?.message || "Failed to load from SQLite");
-  //         setRows([]);
-  //       }
-  //     } finally {
-  //       if (mounted) setLoading(false);
-  //     }
-  //   };
-
-  //   loadFromSQLite();
-  //   return () => (mounted = false);
-  // }, []);
-
   useEffect(() => {
     let mounted = true;
-  
-    const WESTWALK_COMPANIES = new Set([
-      "West Walk Real Estate",
-      "West Walk Advertisement",
-      "Assets Services Company",
-    ]);
-  
-    const loadFromSQLite = async () => {
+
+    const loadData = async () => {
       try {
         setLoading(true);
         setError("");
-  
-        const isWestwalk = WESTWALK_COMPANIES.has(String(company).trim());
-  
-        const result = isWestwalk
-          ? await getWestwalkMongoFromSQLite()
-          : await getOtherCmpMongoFromSQLite();
-  
-        // 🔐 dono ka format safe handle
+
+        // ✅ SINGLE API call only (TrailBalance data)
+        const result = await getWestwalkMongoFromSQLite();
+
         const data =
           result?.data?.data ||
           result?.data ||
           (Array.isArray(result) ? result : []);
-  
+
         if (mounted) setRows(Array.isArray(data) ? data : []);
       } catch (e) {
         if (mounted) {
-          setError(e?.message || "Failed to load from SQLite");
+          setError(e?.message || "Failed to load data");
           setRows([]);
         }
       } finally {
         if (mounted) setLoading(false);
       }
     };
-  
-    loadFromSQLite();
-    return () => (mounted = false);
-  }, [company]);
-  
 
+    loadData();
+    return () => (mounted = false);
+  }, [year, compareYear]); // optional: add company if you want reload on company change
 
   const chartData = useMemo(() => {
-    // ✅ main company revenue
     const mainRev = sumRevenueByMonth(rows, company, year);
     const mainBudget = budgetRevenueByMonth(rows, company, year);
 
-    // ✅ compare year
     const mainRevCompare = compareYear
       ? sumRevenueByMonth(rows, company, compareYear)
       : Array(12).fill(0);
@@ -176,12 +122,10 @@ export default function RevenueChart({
 
       const adNetProfit = adRev.map((v, i) => Number(v || 0) - Number(adCost[i] || 0));
 
-      // ✅ WestWalkRevenue = WestWalkRevenue + AdNetProfit
       for (let i = 0; i < 12; i++) {
         mainRev[i] = Number(mainRev[i] || 0) + Number(adNetProfit[i] || 0);
       }
 
-      // (optional) compare year merge too
       if (compareYear) {
         const adRevC = sumRevenueByMonth(rows, "West Walk Advertisement", compareYear);
         const adCostC = sumCostByMonth(rows, "West Walk Advertisement", compareYear);
@@ -203,11 +147,9 @@ export default function RevenueChart({
 
   const chartSeries = useMemo(() => {
     const s = [{ key: "actualMain", label: `Actual ${year}`, color: "#1B5E20" }];
-
     if (compareYear) {
       s.push({ key: "actualCompare", label: `Actual ${compareYear}`, color: "#4CAF50" });
     }
-
     s.push({ key: "budgetMain", label: `Budget ${year}`, color: "#FF9800" });
     return s;
   }, [year, compareYear]);
@@ -254,7 +196,7 @@ export default function RevenueChart({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Revenue </Text>
+      <Text style={styles.title}>Revenue</Text>
 
       <View style={{ width: usedWidth }}>
         <GroupedBarChart
@@ -285,4 +227,3 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: "600", marginBottom: 12 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
-

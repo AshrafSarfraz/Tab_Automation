@@ -17,11 +17,7 @@ import {
 import { Colors } from "../../../../themes/color";
 import { Assets, Awh, Back, Retaj, Uranisu, WW,  WWA } from "../../../../themes/images";
 
-import PnLSummaryCards from "../../../../component/companyCard";
-import RevenueChart from "../../../../component/Charts/RevenueCharts";
-import ExpenseChart from "../../../../component/Charts/ExpenseChart";
-import NetProfitChart from "../../../../component/Charts/NetProfitChart";
-import RevenueCostNetProfitLineChart from "../../../../component/Charts/linechart";
+
 import CompanyWisedRightPanel from "../../../../component/DashboardRightPanel.tsx/Companywise";
 import GroupWiseRightPanel from "../../../../component/DashboardRightPanel.tsx/groupwise";
 

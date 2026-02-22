@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
-import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal";
-import { getOtherCmpMongoFromSQLite } from "../../../database/otherCmpTrailBal";
+import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal"; // ✅ SINGLE API
 import GroupedBarChart2 from "../GroupBarChart";
-
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -15,7 +13,7 @@ function isRevenue(r) {
 function budgetRevenueByMonth(rows, company, year) {
   const out = Array(12).fill(0);
 
-  for (const r of rows) {
+  for (const r of rows || []) {
     if (String(r.company || "").trim() !== String(company || "").trim()) continue;
     if (Number(r.year) !== Number(year)) continue;
     if (!isRevenue(r)) continue;
@@ -38,12 +36,6 @@ function niceMaxValue(max, expandChart) {
   return Math.ceil(withHeadroom / step) * step;
 }
 
-const WESTWALK_COMPANIES = new Set([
-  "West Walk Real Estate",
-  "West Walk Advertisement",
-  "Assets Services Company",
-]);
-
 export default function RevenueBudgetChart({
   company,
   year,
@@ -64,11 +56,8 @@ export default function RevenueBudgetChart({
         setLoading(true);
         setError("");
 
-        const isWestwalk = WESTWALK_COMPANIES.has(String(company).trim());
-
-        const result = isWestwalk
-          ? await getWestwalkMongoFromSQLite()
-          : await getOtherCmpMongoFromSQLite();
+        // ✅ SINGLE API CALL (must return ALL companies combined)
+        const result = await getWestwalkMongoFromSQLite();
 
         const data =
           result?.data?.data ||
@@ -120,7 +109,6 @@ export default function RevenueBudgetChart({
   const usedWidth =
     expandChart ? (isSidebarCollapsed ? 1030 : 930) : (isSidebarCollapsed ? 500 : 440);
 
-  // ✅ single bar => slightly wider looks better
   const usedBarWidth =
     expandChart ? (isSidebarCollapsed ? 11 : 10) : (isSidebarCollapsed ? 6 : 6);
 
@@ -177,7 +165,7 @@ export default function RevenueBudgetChart({
               .replace(/\.00$/, "")
               .replace(/(\.\d)0$/, "$1")}M`
           }
-          labelStyle={{ fontSize: 9 }} // optional (months better)
+          labelStyle={{ fontSize: 9 }}
         />
       </View>
     </View>

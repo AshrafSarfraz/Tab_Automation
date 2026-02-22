@@ -1,20 +1,37 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
-import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal";
-import { getOtherCmpMongoFromSQLite } from "../../../database/otherCmpTrailBal";
 import GroupedBarChart2 from "../GroupBarChart";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const FLIP_SIGN_COST = -1; // cost ko positive bars banane ke liye
 
+// ✅ SINGLE API (combined Trailbalance)
+
+import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal"; // ✅ ONLY ONE API
+
+// 👆 is path ko apne project ke hisaab se adjust kar lena
+
 const isRevenue = (r) => String(r.accountType || "").trim().toLowerCase() === "revenue";
 const isCost = (r) => String(r.accountType || "").trim().toLowerCase() === "cost";
+
+// ✅ snapshot extractor (safe for different shapes)
+const extractRowsFromSnap = (snap) => {
+  const payload = snap?.data;
+
+  if (Array.isArray(payload)) return payload;           // { data: [...] }
+  if (payload && Array.isArray(payload.data)) return payload.data; // { data: { data:[...] } }
+
+  if (Array.isArray(snap)) return snap;
+  if (snap && Array.isArray(snap.data)) return snap.data;
+
+  return [];
+};
 
 // ✅ Budget Revenue
 function budgetRevenueByMonth(rows, company, year) {
   const out = Array(12).fill(0);
 
-  for (const r of rows) {
+  for (const r of rows || []) {
     if (String(r.company || "").trim() !== String(company || "").trim()) continue;
     if (Number(r.year) !== Number(year)) continue;
     if (!isRevenue(r)) continue;
@@ -31,7 +48,7 @@ function budgetRevenueByMonth(rows, company, year) {
 function budgetCostByMonth(rows, company, year) {
   const out = Array(12).fill(0);
 
-  for (const r of rows) {
+  for (const r of rows || []) {
     if (String(r.company || "").trim() !== String(company || "").trim()) continue;
     if (Number(r.year) !== Number(year)) continue;
     if (!isCost(r)) continue;
@@ -62,12 +79,6 @@ function niceMaxValue(max, expandChart) {
   return Math.ceil(withHeadroom / step) * step;
 }
 
-const WESTWALK_COMPANIES = new Set([
-  "West Walk Real Estate",
-  "West Walk Advertisement",
-  "Assets Services Company",
-]);
-
 export default function NetProfitBudgetChart({
   company,
   year,
@@ -88,16 +99,9 @@ export default function NetProfitBudgetChart({
         setLoading(true);
         setError("");
 
-        const isWestwalk = WESTWALK_COMPANIES.has(String(company).trim());
-
-        const result = isWestwalk
-          ? await getWestwalkMongoFromSQLite()
-          : await getOtherCmpMongoFromSQLite();
-
-        const data =
-          result?.data?.data ||
-          result?.data ||
-          (Array.isArray(result) ? result : []);
+        // ✅ SINGLE CALL
+        const result = await getWestwalkMongoFromSQLite();
+        const data = extractRowsFromSnap(result);
 
         if (mounted) setRows(Array.isArray(data) ? data : []);
       } catch (e) {
@@ -114,7 +118,7 @@ export default function NetProfitBudgetChart({
     return () => {
       mounted = false;
     };
-  }, [company, year]);
+  }, []); // ✅ single load (one snapshot)
 
   const chartData = useMemo(() => {
     const isWestWalk = String(company).trim() === "West Walk Real Estate";
@@ -137,7 +141,6 @@ export default function NetProfitBudgetChart({
     }));
   }, [rows, company, year]);
 
-  // ✅ only one series
   const chartSeries = useMemo(
     () => [{ key: "netBudget", label: `Budget Net Profit ${year}`, color: "#7B1FA2" }],
     [year]
@@ -159,7 +162,7 @@ export default function NetProfitBudgetChart({
   const dynamicMaxValue = useMemo(() => {
     let m = 0;
     for (const row of chartData) {
-      m = Math.max(m, Math.abs(Number(row.netBudget || 0))); // ✅ safe even if negative
+      m = Math.max(m, Math.abs(Number(row.netBudget || 0)));
     }
     return niceMaxValue(m, expandChart);
   }, [chartData, expandChart]);

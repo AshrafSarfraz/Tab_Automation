@@ -8,8 +8,6 @@ import {
   ImageSourcePropType,
   ViewStyle,
 } from 'react-native';
-import { Colors } from '../../themes/color';
-import { LPO } from '../../themes/images';
 
 type Props = {
   onPress: () => void;

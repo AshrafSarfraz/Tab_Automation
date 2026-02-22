@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
-import { getWestwalkMongoFromSQLite } from "../../database/westwalkTrailBal";
-import { getOtherCmpMongoFromSQLite } from "../../database/otherCmpTrailBal";
+import { getWestwalkMongoFromSQLite } from "../../database/westwalkTrailBal"; // ✅ SINGLE API ONLY
 
 type Props = {
   company: string;
@@ -14,20 +13,19 @@ const C_ASSETS = "Assets Services Company";
 
 // ✅ Budget helpers: use budgetedAmount instead of balanceFirst
 function calcBudgetRevenue(rows: any[]) {
-  return rows
+  return (rows || [])
     .filter((x) => String(x.accountType || "").trim().toLowerCase() === "revenue")
     .reduce((s, x) => s + (Number(x.budgetedAmount) || 0), 0);
 }
 
 function calcBudgetCost(rows: any[]) {
-  return rows
+  return (rows || [])
     .filter((x) => String(x.accountType || "").trim().toLowerCase() === "cost")
     .reduce((s, x) => s + (Number(x.budgetedAmount) || 0), 0);
 
   /**
    * ⚠️ If your budget COST is stored as POSITIVE number,
-   * and you want netProfit = revenue - cost, then do this instead:
-   *
+   * and you want netProfit = revenue - cost, then do:
    * .reduce((s, x) => s + (Number(x.budgetedAmount) || 0), 0) * -1
    */
 }
@@ -35,8 +33,21 @@ function calcBudgetCost(rows: any[]) {
 function calcBudgetNetProfit(rows: any[]) {
   const rev = calcBudgetRevenue(rows);
   const cost = calcBudgetCost(rows);
-  return rev + cost; // ✅ same pattern as your actual code (cost signed)
+  return rev + cost; // ✅ cost signed world
 }
+
+// ✅ Extract rows (handles both sqlite snapshot formats)
+const extractRows = (snap: any) => {
+  const payload = snap?.data;
+
+  if (Array.isArray(payload)) return payload; // e.g. { data: [...] }
+  if (payload && Array.isArray(payload.data)) return payload.data; // e.g. { data: { data:[...] } }
+
+  if (Array.isArray(snap)) return snap;
+  if (snap && Array.isArray(snap.data)) return snap.data;
+
+  return [];
+};
 
 export default function BudgetPnLSummaryCards({ company, year }: Props) {
   const [allRows, setAllRows] = useState<any[]>([]);
@@ -46,34 +57,16 @@ export default function BudgetPnLSummaryCards({ company, year }: Props) {
   useEffect(() => {
     let mounted = true;
 
-    const WESTWALK_COMPANIES = new Set([C_RE, C_ADV, C_ASSETS]);
-
-    const extractRows = (snap: any) => {
-      const payload = snap?.data;
-
-      if (Array.isArray(payload)) return payload;
-      if (payload && Array.isArray(payload.data)) return payload.data;
-
-      if (Array.isArray(snap)) return snap;
-      if (snap && Array.isArray(snap.data)) return snap.data;
-
-      return [];
-    };
-
     const load = async () => {
       try {
         setLoading(true);
         setError("");
 
-        const isWestwalk = WESTWALK_COMPANIES.has(String(company).trim());
-
-        const snap = isWestwalk
-          ? await getWestwalkMongoFromSQLite()
-          : await getOtherCmpMongoFromSQLite();
+        // ✅ SINGLE API CALL (must return ALL companies combined)
+        const snap = await getWestwalkMongoFromSQLite();
 
         const rows = extractRows(snap);
-
-        const yearRows = rows.filter((r: any) => Number(r.year) === Number(year));
+        const yearRows = (rows || []).filter((r: any) => Number(r.year) === Number(year));
 
         if (mounted) setAllRows(yearRows);
       } catch (e: any) {
@@ -90,19 +83,19 @@ export default function BudgetPnLSummaryCards({ company, year }: Props) {
     return () => {
       mounted = false;
     };
-  }, [year, company]);
+  }, [year]);
 
   const { totalRevenue, totalCost, netProfit } = useMemo(() => {
     const byCompany = (name: string) => {
       const n = String(name || "").trim().toLowerCase();
-      return allRows.filter(
+      return (allRows || []).filter(
         (r: any) => String(r.company || "").trim().toLowerCase() === n
       );
     };
 
     const currentRows = byCompany(company);
 
-    // ✅ Budget totals
+    // ✅ Budget totals (selected company)
     let rev = calcBudgetRevenue(currentRows);
     let cost = calcBudgetCost(currentRows);
 
