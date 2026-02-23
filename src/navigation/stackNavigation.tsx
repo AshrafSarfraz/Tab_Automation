@@ -24,6 +24,7 @@ import BudgtedDashboard from '../screen/Reports/budgted/budgetedDashboard';
 import RfpCompaniesScreen from '../screen/RFP/RFP_Companies';
 import RfpListByCompany from '../screen/RFP/RFP_List';
 import GroupMonthlySummaryScreen from '../screen/Reports/Performance_Report/GroupReport';
+import CashFlowDashboard from '../screen/Reports/CashFlow/Dashboard';
 
 const Stack = createNativeStackNavigator();
 
@@ -72,6 +73,9 @@ const StackNavigation = () => {
         <Stack.Screen name="BudgtedDashboard" component={BudgtedDashboard} />
         <Stack.Screen name="BudgtedTrialBalanceTable"  component={TrialBalanceTableScreen} />
        
+        <Stack.Screen name="CashFlowDashboard" component={CashFlowDashboard} />
+  
+
         <Stack.Screen name="Csvupload" component={CsvUploadScreen} />
         <Stack.Screen name="GroupMonthlySummaryScreen"   component={GroupMonthlySummaryScreen} />
 
@@ -83,3 +87,5 @@ const StackNavigation = () => {
 };
 
 export default StackNavigation;
+
+

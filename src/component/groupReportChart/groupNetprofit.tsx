@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 
 import { getWestwalkMongoFromSQLite } from "../../database/westwalkTrailBal";
-import { getOtherCmpMongoFromSQLite } from "../../database/otherCmpTrailBal";
+
 import GroupedBarChart from "../Charts/GroupBarChart";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -101,15 +101,9 @@ export default function GroupNetProfitChart({
         setLoading(true);
         setError("");
 
-        const [snapW, snapO] = await Promise.all([
-          getWestwalkMongoFromSQLite(),
-          getOtherCmpMongoFromSQLite(),
-        ]);
+        const snapW = await getWestwalkMongoFromSQLite();
 
-        const allRows = [
-          ...extractRowsFromSnap(snapW),
-          ...extractRowsFromSnap(snapO),
-        ];
+        const allRows = extractRowsFromSnap(snapW);
 
         if (mounted) setRows(Array.isArray(allRows) ? allRows : []);
       } catch (e: any) {

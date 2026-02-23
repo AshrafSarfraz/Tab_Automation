@@ -60,8 +60,7 @@ const ReportSelection = () => {
           caption="Create and manage Local Purchase Orders for approved procurement of goods and services."
           icon={Cashflow}
           Color="#31368A"
-           onPress={() => navigation.navigate('Ceo_Dashboard')}/> 
-      
+           onPress={() => navigation.navigate('CashFlowDashboard')}/> 
         </View>
       
    
