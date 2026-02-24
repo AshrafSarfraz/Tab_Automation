@@ -6,7 +6,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Colors } from "../../themes/color";
-import PnLSummaryCards from "../companyCard";
+import PnLSummaryCards from "../companyCard/TrailBalanceCard";
 import NetProfitChart from "../Charts/NetProfitChart";
 import RevenueChart from "../Charts/RevenueCharts";
 import ExpenseChart from "../Charts/ExpenseChart";

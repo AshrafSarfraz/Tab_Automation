@@ -4,61 +4,72 @@ import GroupedBarChart from "./GroupBarChart";
 import { getWestwalkMongoFromSQLite } from "../../database/westwalkTrailBal";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// If cost in DB is NEGATIVE (signed world) and you want POSITIVE expenses on chart => -1
+// If cost already POSITIVE in DB => 1
 const FLIP_SIGN = -1;
 
-const isRevenue = (r) => String(r.accountType || "").trim().toLowerCase() === "revenue";
-const isCost = (r) => String(r.accountType || "").trim().toLowerCase() === "cost";
+const C_RE = "West Walk Real Estate";
+const C_ADV = "West Walk Advertisement";
+const C_ASSETS = "Assets Services Company";
 
-function sumRevenueByMonth(rows, company, year) {
+const norm = (s: any) => String(s || "").trim().toLowerCase();
+const isRevenue = (r: any) => norm(r.accountType) === "revenue";
+const isCost = (r: any) => norm(r.accountType) === "cost";
+
+// ✅ safe unpacking (handles multiple formats)
+const extractRows = (result: any) => {
+  const data =
+    result?.data?.data ||
+    result?.data ||
+    (Array.isArray(result) ? result : []);
+  return Array.isArray(data) ? data : [];
+};
+
+// ---------- RAW SIGN WORLD SUMS (NO FLIP HERE) ----------
+function sumByMonthRaw(
+  rows: any[],
+  company: string,
+  year: number,
+  predicate: (r: any) => boolean,
+  field: "balanceFirst" | "budgetedAmount"
+) {
   const out = Array(12).fill(0);
-  for (const r of rows) {
-    if (String(r.company || "").trim() !== String(company || "").trim()) continue;
+  const c = norm(company);
+
+  for (const r of rows || []) {
+    if (norm(r.company) !== c) continue;
     if (Number(r.year) !== Number(year)) continue;
-    if (!isRevenue(r)) continue;
+    if (!predicate(r)) continue;
 
     const m = Number(r.month);
     if (!m || m < 1 || m > 12) continue;
 
-    out[m - 1] += Number(r.balanceFirst || 0);
+    out[m - 1] += Number(r[field] || 0); // RAW
   }
+
   return out;
 }
 
-function sumCostByMonth(rows, company, year) {
-  const out = Array(12).fill(0);
-  for (const r of rows) {
-    if (String(r.company || "").trim() !== String(company || "").trim()) continue;
-    if (Number(r.year) !== Number(year)) continue;
-    if (!isCost(r)) continue;
-
-    const m = Number(r.month);
-    if (!m || m < 1 || m > 12) continue;
-
-    out[m - 1] += Number(r.balanceFirst || 0) * FLIP_SIGN;
-  }
-  return out;
+function revenueByMonthRaw(rows: any[], company: string, year: number) {
+  return sumByMonthRaw(rows, company, year, isRevenue, "balanceFirst");
 }
 
-function sumExpenseByMonth(rows, company, year) {
-  return sumCostByMonth(rows, company, year);
+function costByMonthRaw(rows: any[], company: string, year: number) {
+  return sumByMonthRaw(rows, company, year, isCost, "balanceFirst"); // RAW cost (usually negative)
 }
 
-function budgetExpenseByMonth(rows, company, year) {
-  const out = Array(12).fill(0);
-  for (const r of rows) {
-    if (String(r.company || "").trim() !== String(company || "").trim()) continue;
-    if (Number(r.year) !== Number(year)) continue;
-    if (!isCost(r)) continue;
-
-    const m = Number(r.month);
-    if (!m || m < 1 || m > 12) continue;
-
-    out[m - 1] += Number(r.budgetedAmount || 0) * FLIP_SIGN;
-  }
-  return out;
+function budgetCostByMonthRaw(rows: any[], company: string, year: number) {
+  return sumByMonthRaw(rows, company, year, isCost, "budgetedAmount"); // RAW budget cost
 }
 
-function niceMaxValue(max, expandChart) {
+function netByMonthRaw(rows: any[], company: string, year: number, field: "balanceFirst" | "budgetedAmount") {
+  const rev = sumByMonthRaw(rows, company, year, isRevenue, field);
+  const cst = sumByMonthRaw(rows, company, year, isCost, field);
+  return rev.map((v, i) => Number(v || 0) + Number(cst[i] || 0)); // ✅ TrialBalance rule
+}
+
+function niceMaxValue(max: number, expandChart: boolean) {
   if (!Number.isFinite(max) || max <= 0) return 1;
   const headroom = expandChart ? 1.2 : 1.1;
   const withHeadroom = max * headroom;
@@ -74,8 +85,16 @@ export default function ExpenseChart({
   groupGap = 14,
   expandChart = false,
   isSidebarCollapsed = false,
+}: {
+  company: string;
+  year: number;
+  compareYear?: number;
+  height?: number;
+  groupGap?: number;
+  expandChart?: boolean;
+  isSidebarCollapsed?: boolean;
 }) {
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -87,17 +106,11 @@ export default function ExpenseChart({
         setLoading(true);
         setError("");
 
-        // ✅ SINGLE call only (this should now fetch ALL TrailBalance data)
-        const result = await getWestwalkMongoFromSQLite();
+        const result = await getWestwalkMongoFromSQLite(); // ✅ SINGLE CALL
+        const data = extractRows(result);
 
-        // 🔐 safe unpacking
-        const data =
-          result?.data?.data ||
-          result?.data ||
-          (Array.isArray(result) ? result : []);
-
-        if (mounted) setRows(Array.isArray(data) ? data : []);
-      } catch (e) {
+        if (mounted) setRows(data);
+      } catch (e: any) {
         if (mounted) {
           setError(e?.message || "Failed to load data");
           setRows([]);
@@ -108,73 +121,77 @@ export default function ExpenseChart({
     };
 
     loadData();
-    return () => (mounted = false);
-  }, [year, compareYear]); // ✅ you can also keep [company] if you want refresh on company change
+    return () => {
+      mounted = false;
+    };
+  }, [year, compareYear]);
 
   const chartData = useMemo(() => {
-    const mainCost = sumExpenseByMonth(rows, company, year);
-    const mainBudget = budgetExpenseByMonth(rows, company, year);
+    const isRE = norm(company) === norm(C_RE);
 
-    const mainCostCompare = compareYear
-      ? sumExpenseByMonth(rows, company, compareYear)
+    // ---------------- ACTUAL EXPENSE (RAW) ----------------
+    // expense = cost (raw signed)
+    let mainCostRaw = costByMonthRaw(rows, company, year);
+
+    let compareCostRaw = compareYear
+      ? costByMonthRaw(rows, company, compareYear)
       : Array(12).fill(0);
 
-    // ✅ ONLY for West Walk Real Estate: add Assets NET PROFIT into COST
-    if (String(company).trim() === "West Walk Real Estate") {
-      const assetsRev = sumRevenueByMonth(rows, "Assets Services Company", year);
-      const assetsCost = sumCostByMonth(rows, "Assets Services Company", year);
-
-      const assetsNetProfit = assetsRev.map(
-        (v, i) => Number(v || 0) - Number(assetsCost[i] || 0)
-      );
-
-      for (let i = 0; i < 12; i++) {
-        mainCost[i] = Number(mainCost[i] || 0) + Number(assetsNetProfit[i] || 0);
-      }
+    // ✅ RE rule (match TrialBalance):
+    // FM COST rows = Assets NET (rev + cost raw) added into RE COST
+    if (isRE) {
+      const assetsNetRaw = netByMonthRaw(rows, C_ASSETS, year, "balanceFirst");
+      mainCostRaw = mainCostRaw.map((v, i) => Number(v || 0) + Number(assetsNetRaw[i] || 0));
 
       if (compareYear) {
-        const assetsRevC = sumRevenueByMonth(rows, "Assets Services Company", compareYear);
-        const assetsCostC = sumCostByMonth(rows, "Assets Services Company", compareYear);
-
-        const assetsNetProfitC = assetsRevC.map(
-          (v, i) => Number(v || 0) - Number(assetsCostC[i] || 0)
-        );
-
-        for (let i = 0; i < 12; i++) {
-          mainCostCompare[i] =
-            Number(mainCostCompare[i] || 0) + Number(assetsNetProfitC[i] || 0);
-        }
+        const assetsNetRawC = netByMonthRaw(rows, C_ASSETS, compareYear, "balanceFirst");
+        compareCostRaw = compareCostRaw.map((v, i) => Number(v || 0) + Number(assetsNetRawC[i] || 0));
       }
     }
 
+    // ---------------- BUDGET EXPENSE (RAW) ----------------
+    let budgetCostRaw = budgetCostByMonthRaw(rows, company, year);
+
+    if (isRE) {
+      const assetsBudgetNetRaw = netByMonthRaw(rows, C_ASSETS, year, "budgetedAmount");
+      budgetCostRaw = budgetCostRaw.map((v, i) => Number(v || 0) + Number(assetsBudgetNetRaw[i] || 0));
+    }
+
+    // ---------------- DISPLAY (make positive) ----------------
+    const mainExpense = mainCostRaw.map((v) => Number(v || 0) * FLIP_SIGN);
+    const compareExpense = compareCostRaw.map((v) => Number(v || 0) * FLIP_SIGN);
+    const budgetExpense = budgetCostRaw.map((v) => Number(v || 0) * FLIP_SIGN);
+
     return MONTHS.map((label, i) => ({
       label,
-      actualMain: Number(mainCost[i] || 0),
-      ...(compareYear ? { actualCompare: Number(mainCostCompare[i] || 0) } : {}),
-      budgetMain: Number(mainBudget[i] || 0),
+      actualMain: Number(mainExpense[i] || 0),
+      ...(compareYear ? { actualCompare: Number(compareExpense[i] || 0) } : {}),
+      budgetMain: Number(budgetExpense[i] || 0),
     }));
   }, [rows, company, year, compareYear]);
 
   const chartSeries = useMemo(() => {
-    const s = [{ key: "actualMain", label: `Actual ${year}`, color: "#E53935" }];
-    if (compareYear) {
-      s.push({ key: "actualCompare", label: `Actual ${compareYear}`, color: "#EF9A9A" });
-    }
+    const s: any[] = [{ key: "actualMain", label: `Actual ${year}`, color: "#E53935" }];
+    if (compareYear) s.push({ key: "actualCompare", label: `Actual ${compareYear}`, color: "#EF9A9A" });
     s.push({ key: "budgetMain", label: `Budget ${year}`, color: "#FF9800" });
     return s;
   }, [year, compareYear]);
 
-  const usedWidth =
-    expandChart ? (isSidebarCollapsed ? 1030 : 930) : (isSidebarCollapsed ? 500 : 440);
+  const usedWidth = expandChart
+    ? (isSidebarCollapsed ? 1030 : 930)
+    : (isSidebarCollapsed ? 500 : 440);
 
-  const usedBarWidth =
-    expandChart ? (isSidebarCollapsed ? 11 : 10) : (isSidebarCollapsed ? 5 : 5);
+  const usedBarWidth = expandChart
+    ? (isSidebarCollapsed ? 11 : 10)
+    : (isSidebarCollapsed ? 5 : 5);
 
-  const usedBarGap =
-    expandChart ? (isSidebarCollapsed ? 11 : 10) : (isSidebarCollapsed ? 5 : 4);
+  const usedBarGap = expandChart
+    ? (isSidebarCollapsed ? 11 : 10)
+    : (isSidebarCollapsed ? 5 : 4);
 
-  const usedGroupGap =
-    expandChart ? (isSidebarCollapsed ? 28 : 25) : (isSidebarCollapsed ? groupGap : 10);
+  const usedGroupGap = expandChart
+    ? (isSidebarCollapsed ? 28 : 25)
+    : (isSidebarCollapsed ? groupGap : 10);
 
   const showValuesOnTop = expandChart;
 
@@ -220,7 +237,7 @@ export default function ExpenseChart({
           showValuesOnTop={showValuesOnTop}
           showLegend
           yAxisOffset={-45}
-          valueFormatter={(v) =>
+          valueFormatter={(v: number) =>
             `${(v / 1_000_000)
               .toFixed(1)
               .replace(/\.00$/, "")

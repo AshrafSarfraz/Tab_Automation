@@ -16,10 +16,11 @@ import {
 import { Colors } from "../../../../themes/color";
 import { Assets, Awh, Back, Retaj, Uranisu, WW,  WWA } from "../../../../themes/images";
 
-import BudgetExpenseChart from "../../../../component/budgetedChart/Charts/ExpenseChart";
-import RevenueBudgetChart from "../../../../component/budgetedChart/Charts/RevenueCharts";
-import NetProfitBudgetChart from "../../../../component/budgetedChart/Charts/NetProfitChart";
-import BudgetPnLSummaryCards from "../../../../component/companyCard/budgetedCard";
+
+import CashFlowRevenueChart from "../../../../component/CashFlowChart/Charts/CashFlowRevenueChart";
+import CashFlowExpenseChart from "../../../../component/CashFlowChart/Charts/CashFlowExpenseChart";
+import CashFlowNetProfitChart from "../../../../component/CashFlowChart/Charts/CashFlowNetProfit";
+import CashFlowPnLSummaryCards from "../../../../component/companyCard/cashflowCard";
 
 const companies = [
   { id: 1, name: "AL WESSIL HOLDING", logo: Awh },
@@ -38,11 +39,11 @@ const BudgtedDashboard = ({ navigation }: any) => {
   const MAX_WIDTH = 220;
 
   const defaultCompany =
-    companies.find((c) => c.name === "AL WESSIL HOLDING") || companies[0];
+    companies.find((c) => c.name === "West Walk Real Estate") || companies[0];
 
   const [collapsed, setCollapsed] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(defaultCompany.id);
-  const [selectedYear, setSelectedYear] = useState(2025);
+  const [selectedYear, setSelectedYear] = useState(2026);
   const [showYears, setShowYears] = useState(false);
 
   // ✅ NEW: expand chart toggle
@@ -218,7 +219,7 @@ const BudgtedDashboard = ({ navigation }: any) => {
             onScrollBeginDrag={() => setShowYears(false)}
           >
             <View style={{ marginTop: 16 }}>
-              <BudgetPnLSummaryCards
+              <CashFlowPnLSummaryCards
                 company={selectedCompanyObj?.name || ""}
                 year={selectedYear}
               />
@@ -231,25 +232,25 @@ const BudgtedDashboard = ({ navigation }: any) => {
                 expandChart && styles.ChartContainerExpanded, // ✅ expands layout
               ]}
             >
-               <NetProfitBudgetChart
+               <CashFlowNetProfitChart
                 company={selectedCompanyObj?.name || ""}
                 year={selectedYear}
                 expandChart={expandChart}
                 isSidebarCollapsed={collapsed}
               />
-              <RevenueBudgetChart
+              <CashFlowRevenueChart
+                company={selectedCompanyObj?.name || ""}
+                year={selectedYear}
+                expandChart={expandChart}
+                isSidebarCollapsed={collapsed}
+              />
+              <CashFlowExpenseChart
                 company={selectedCompanyObj?.name || ""}
                 year={selectedYear}
                 expandChart={expandChart}
                 isSidebarCollapsed={collapsed}
               />
 
-              <BudgetExpenseChart
-                company={selectedCompanyObj?.name || ""}
-                year={selectedYear}
-                expandChart={expandChart}
-                isSidebarCollapsed={collapsed}
-              />
               {/* <RevenueCostNetProfitLineChart 
                company={selectedCompanyObj?.name || ""}
                year={selectedYear}

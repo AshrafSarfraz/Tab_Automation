@@ -17,7 +17,6 @@ import {
 import { Colors } from "../../../../themes/color";
 import { Assets, Awh, Back, Retaj, Uranisu, WW,  WWA } from "../../../../themes/images";
 
-
 import CompanyWisedRightPanel from "../../../../component/DashboardRightPanel.tsx/Companywise";
 import GroupWiseRightPanel from "../../../../component/DashboardRightPanel.tsx/groupwise";
 

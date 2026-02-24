@@ -2,24 +2,25 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal";
 import GroupedBarChart from "../../Charts/GroupBarChart";
+ // ✅ single API wrapper
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const FLIP_SIGN = -1;
 
-function isRevenue(r) {
-  return String(r.accountType || "").trim().toLowerCase() === "revenue";
-}
-function isCost(r) {
-  return String(r.accountType || "").trim().toLowerCase() === "cost";
-}
 
+const C_RE = "West Walk Real Estate";
+const C_ADV = "West Walk Advertisement";
+const C_ASSETS = "Assets Services Company";
+
+const isRevenue = (r) => String(r.accountType || "").trim().toLowerCase() === "revenue";
+const isCost = (r) => String(r.accountType || "").trim().toLowerCase() === "cost";
+
+// Monthly sums
 function sumRevenueByMonth(rows, company, year) {
   const out = Array(12).fill(0);
   for (const r of rows) {
     if (String(r.company || "").trim() !== String(company || "").trim()) continue;
     if (Number(r.year) !== Number(year)) continue;
     if (!isRevenue(r)) continue;
-
     const m = Number(r.month);
     if (!m || m < 1 || m > 12) continue;
     out[m - 1] += Number(r.balanceFirst || 0);
@@ -33,26 +34,52 @@ function sumCostByMonth(rows, company, year) {
     if (String(r.company || "").trim() !== String(company || "").trim()) continue;
     if (Number(r.year) !== Number(year)) continue;
     if (!isCost(r)) continue;
-
     const m = Number(r.month);
     if (!m || m < 1 || m > 12) continue;
-    out[m - 1] += Number(r.balanceFirst || 0) * FLIP_SIGN;
+    out[m - 1] += Number(r.balanceFirst || 0);
   }
   return out;
 }
 
+// Budget
 function budgetRevenueByMonth(rows, company, year) {
   const out = Array(12).fill(0);
   for (const r of rows) {
     if (String(r.company || "").trim() !== String(company || "").trim()) continue;
     if (Number(r.year) !== Number(year)) continue;
     if (!isRevenue(r)) continue;
-
     const m = Number(r.month);
     if (!m || m < 1 || m > 12) continue;
     out[m - 1] += Number(r.budgetedAmount || 0);
   }
   return out;
+}
+
+function budgetCostByMonth(rows, company, year) {
+  const out = Array(12).fill(0);
+  for (const r of rows) {
+    if (String(r.company || "").trim() !== String(company || "").trim()) continue;
+    if (Number(r.year) !== Number(year)) continue;
+    if (!isCost(r)) continue;
+    const m = Number(r.month);
+    if (!m || m < 1 || m > 12) continue;
+    out[m - 1] += Number(r.budgetedAmount || 0);
+  }
+  return out;
+}
+
+// Net Profit = Revenue - Cost
+function netProfitByMonth(rows, company, year) {
+  const rev = sumRevenueByMonth(rows, company, year);
+  const cost = sumCostByMonth(rows, company, year);
+  return rev.map((v, i) => Number(v || 0) + Number(cost[i] || 0));
+}
+
+// Budget Net Profit
+function budgetNetProfitByMonth(rows, company, year) {
+  const rev = budgetRevenueByMonth(rows, company, year);
+  const cost = budgetCostByMonth(rows, company, year);
+  return rev.map((v, i) => Number(v || 0) - Number(cost[i] || 0));
 }
 
 function niceMaxValue(max, expandChart) {
@@ -63,7 +90,7 @@ function niceMaxValue(max, expandChart) {
   return Math.ceil(withHeadroom / step) * step;
 }
 
-export default function CashFlowRevenueChart({
+export default function CashFlowNetProfitChart({
   company,
   year,
   height = 300,
@@ -82,13 +109,8 @@ export default function CashFlowRevenueChart({
       try {
         setLoading(true);
         setError("");
-
         const result = await getWestwalkMongoFromSQLite();
-        const data =
-          result?.data?.data ||
-          result?.data ||
-          (Array.isArray(result) ? result : []);
-
+        const data = result?.data?.data || result?.data || (Array.isArray(result) ? result : []);
         if (mounted) setRows(Array.isArray(data) ? data : []);
       } catch (e) {
         if (mounted) {
@@ -101,44 +123,44 @@ export default function CashFlowRevenueChart({
     };
 
     loadData();
-    return () => (mounted = false);
-  }, [year, company]);
+    return () => { mounted = false; };
+  }, [company, year]);
 
-  // ✅ chart data with budget logic
   const chartData = useMemo(() => {
-    const mainRev = sumRevenueByMonth(rows, company, year);
-    const mainBudget = budgetRevenueByMonth(rows, company, year);
+    const comp = String(company || "").trim();
+    const isWestWalk = comp === C_RE;
 
-    // West Walk Advertisement adjustment
-    if (String(company).trim() === "West Walk Real Estate") {
-      const adRev = sumRevenueByMonth(rows, "West Walk Advertisement", year);
-      const adCost = sumCostByMonth(rows, "West Walk Advertisement", year);
-      const adNetProfit = adRev.map(
-        (v, i) => Number(v || 0) - Number(adCost[i] || 0)
-      );
+    // actual and budget
+    let actualMain = netProfitByMonth(rows, comp, year);
+    let budgetMain = budgetNetProfitByMonth(rows, comp, year);
 
-      for (let i = 0; i < 12; i++) {
-        mainRev[i] = Number(mainRev[i] || 0) + Number(adNetProfit[i] || 0);
+    // if actual exists, budget = 0
+    budgetMain = budgetMain.map((b, i) => (actualMain[i] > 0 ? 0 : b));
+
+    // WestWalk aggregation: include Advertisement + Assets
+    if (isWestWalk) {
+      const addCompanies = [C_ADV, C_ASSETS];
+      for (const c of addCompanies) {
+        const net = netProfitByMonth(rows, c, year);
+        const netBudget = budgetNetProfitByMonth(rows, c, year);
+        actualMain = actualMain.map((v, i) => Number(v || 0) + Number(net[i] || 0));
+        budgetMain = budgetMain.map((b, i) => (actualMain[i] > 0 ? 0 : Number(b || 0) + Number(netBudget[i] || 0)));
       }
     }
 
-    return MONTHS.map((label, i) => {
-      const actual = Number(mainRev[i] || 0);
-      const budget = actual > 0 ? 0 : Number(mainBudget[i] || 0); // <-- budget zero if actual exists
-      return {
-        label,
-        actualMain: actual,
-        budgetMain: budget,
-      };
-    });
+    return MONTHS.map((label, i) => ({
+      label,
+      actualMain: actualMain[i],
+      budgetMain: budgetMain[i],
+    }));
   }, [rows, company, year]);
 
   const chartSeries = useMemo(() => [
-    { key: "actualMain", label: `Actual ${year}`, color: "#1B5E20" },
+    { key: "actualMain", label: `Actual ${year}`, color: "#7B1FA2" },
     { key: "budgetMain", label: `Budget ${year}`, color: "#FF9800" },
   ], [year]);
 
- 
+
   const usedWidth =
   expandChart ? (isSidebarCollapsed ? 1030 : 930) : (isSidebarCollapsed ? 500 : 440);
 
@@ -150,7 +172,7 @@ const usedBarGap =
 
 const usedGroupGap =
   expandChart ? (isSidebarCollapsed ? 43 : 40) : (isSidebarCollapsed ? groupGap : 11);
-
+  
   const showValuesOnTop = expandChart;
 
   const dynamicMaxValue = useMemo(() => {
@@ -162,25 +184,12 @@ const usedGroupGap =
     return niceMaxValue(m, expandChart);
   }, [chartData, expandChart]);
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={{ color: "red", fontWeight: "700" }}>{error}</Text>
-      </View>
-    );
-  }
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" /></View>;
+  if (error) return <View style={styles.center}><Text style={{ color: "red", fontWeight: "700" }}>{error}</Text></View>;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Revenue</Text>
+      <Text style={styles.title}>Net Profit</Text>
       <View style={{ width: usedWidth }}>
         <GroupedBarChart
           data={chartData}
@@ -193,12 +202,7 @@ const usedGroupGap =
           showLegend
           showValuesOnTop={showValuesOnTop}
           yAxisOffset={-45}
-          valueFormatter={(v) =>
-            `${(v / 1_000_000)
-              .toFixed(1)
-              .replace(/\.00$/, "")
-              .replace(/(\.\d)0$/, "$1")}M`
-          }
+          valueFormatter={(v) => `${(v/1_000_000).toFixed(1).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1")}M`}
         />
       </View>
     </View>
