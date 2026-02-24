@@ -1,3 +1,8 @@
+// TrialBalance.tsx (BUDGET MODE + YEARLY MODE ONLY)
+// ✅ Display rule (NO budget zeroing):
+// - Month cell shows: Actual (A) if exists AND month is BEFORE current month, otherwise Budget (B)
+// ✅ Previous totals (P) shown only in Yearly mode
+// ✅ Budget data remains unchanged (export will still have original budgetMonthly)
 
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -36,17 +41,17 @@ const CODE_W = 110;
 const LEFT_WIDTH = 570;
 
 // RIGHT
-const TOTAL_W = 100; // current total (A) - Yearly mode only
-const PREV_W = 120; // previous year total (P) - Yearly mode only
-const BUDGET_TOTAL_W = 120; // budget total (B)
+const TOTAL_W = 100; // yearly only
+const PREV_W = 120; // yearly only
+const BUDGET_TOTAL_W = 120; // for budget mode we show "Total (A/B)" (actual-first)
 const MONTH_W = 100;
 
-// ✅ CLUB ACCOUNTS (FIX)
+// ✅ CLUB ACCOUNTS
 const CLUB_ACCOUNTS = new Set(["44104", "44107", "44122", "44124", "44125"]);
 const CLUB_ACCOUNTS_LABEL = "Tenant Variation Request";
 const CLUB_ACCOUNTS_ACCOUNT = "44104,44107,44122,44124,44125";
 
-// ✅ Westwalk companies condition (KEEP for rules)
+// ✅ Westwalk companies
 const C_RE = "West Walk Real Estate";
 const C_ADV = "West Walk Advertisement";
 const C_ASSETS = "Assets Services Company";
@@ -224,14 +229,14 @@ type RowItem = TrialBalanceRow & {
   yearHeader?: boolean;
   totalType?: "Revenue" | "Cost" | "Grand";
 
-  totalBalances?: number[]; // A monthly (used internally)
-  totalSum?: number; // A total (yearly)
+  totalBalances?: number[]; // A monthly
+  totalSum?: number; // A yearly total
 
-  prevYearSum?: number; // P total (yearly)
-  prevMonthlyBalances?: number[]; // P monthly (used internally)
+  prevYearSum?: number; // P yearly total
+  prevMonthlyBalances?: number[]; // P monthly
 
   budgetMonthly?: number[]; // B monthly
-  budgetSum?: number; // B total (yearly)
+  budgetSum?: number; // B yearly total
 
   isGroupParent?: boolean;
   groupKey?: string;
@@ -259,13 +264,41 @@ const normalize = (r: ApiRow): TrialBalanceRow => {
   };
 };
 
-// ✅ extract rows from api result (handles multiple response formats)
 const extractRowsFromSnap = (snap: any): ApiRow[] => {
   if (snap && Array.isArray(snap.data)) return snap.data;
   if (snap?.data && Array.isArray(snap.data.data)) return snap.data.data;
   if (snap?.data && Array.isArray(snap.data)) return snap.data;
   if (Array.isArray(snap)) return snap;
   return [];
+};
+
+// ✅ Display rule updated:
+// - Only months BEFORE current month can show Actual
+// - Current month and future months MUST show Budget even if actual exists
+const EPS = 0.000001;
+const hasActual = (v: number) => Math.abs(Number(v || 0)) > EPS;
+
+// 1..12
+const getCurrentMonth = () => new Date().getMonth() + 1;
+
+const displayActualElseBudget = (row: RowItem, i: number) => {
+  const currentMonth = getCurrentMonth(); // ex: Feb = 2
+  const monthNo = i + 1;
+
+  const a = row.totalBalances?.[i] ?? 0; // Actual month
+  const b = row.budgetMonthly?.[i] ?? 0; // Budget month
+
+  // ✅ only previous months can use actual
+  const allowActual = monthNo < currentMonth;
+
+  if (allowActual && hasActual(a)) return a;
+  return b;
+};
+
+const displayActualElseBudgetTotal = (row: RowItem) => {
+  let s = 0;
+  for (let i = 0; i < 12; i++) s += Number(displayActualElseBudget(row, i) || 0);
+  return s;
 };
 
 // ======= Net Profit builders (RAW sign world) =======
@@ -304,13 +337,13 @@ const budgetNetProfitMonthlyRaw = (all: TrialBalanceRow[], company: string, year
 // ======================= MODES =======================
 type ScreenMode = "budget" | "yearly";
 
-export default function CashFlowTableScreen() {
+export default function TrialBalanceTableScreen() {
   const route = useRoute<any>();
   const { company = "", type = "", year, mode = "budget" } = (route.params ?? {}) as {
     company?: string;
     type?: string;
     year?: number;
-    mode?: ScreenMode; // ✅ only "budget" | "yearly"
+    mode?: ScreenMode;
   };
 
   const isBudgetMode = mode === "budget";
@@ -318,7 +351,7 @@ export default function CashFlowTableScreen() {
 
   const rightContentWidth = isBudgetMode
     ? BUDGET_TOTAL_W + 12 * MONTH_W
-    : TOTAL_W + PREV_W + BUDGET_TOTAL_W; // yearly
+    : TOTAL_W + PREV_W + BUDGET_TOTAL_W;
 
   const compParam = String(company || "").trim();
   const typeParam = String(type || "").trim();
@@ -387,7 +420,7 @@ export default function CashFlowTableScreen() {
           return;
         }
 
-        // ✅ SINGLE API CALL ONLY
+        // ✅ SINGLE API CALL
         const snap = await getWestwalkMongoFromSQLite();
         const rawRows = extractRowsFromSnap(snap);
 
@@ -406,7 +439,7 @@ export default function CashFlowTableScreen() {
         let curr = all.filter((r) => r.company === compParam && r.year === yearParam);
         let prev = all.filter((r) => r.company === compParam && r.year === prevYear);
 
-        // ✅ TRANSFER INTO C_RE (same business logic)
+        // ✅ TRANSFER INTO C_RE
         if (compParam === C_RE) {
           const advNetA = netProfitMonthlyRaw(all, C_ADV, yearParam);
           const advNetB = budgetNetProfitMonthlyRaw(all, C_ADV, yearParam);
@@ -476,7 +509,7 @@ export default function CashFlowTableScreen() {
           prev = prev.concat(marketingRightsRowsPrev, fmCostRowsPrev);
         }
 
-        // ✅ OFFSET inside source companies (same logic)
+        // ✅ OFFSET inside Assets
         if (compParam === C_ASSETS) {
           const assetsNetA = netProfitMonthlyRaw(all, C_ASSETS, yearParam);
           const assetsNetB = budgetNetProfitMonthlyRaw(all, C_ASSETS, yearParam);
@@ -514,6 +547,7 @@ export default function CashFlowTableScreen() {
           prev = prev.concat(offsetAssetsPrev);
         }
 
+        // ✅ OFFSET inside Adv
         if (compParam === C_ADV) {
           const advNetA = netProfitMonthlyRaw(all, C_ADV, yearParam);
           const advNetB = budgetNetProfitMonthlyRaw(all, C_ADV, yearParam);
@@ -551,7 +585,7 @@ export default function CashFlowTableScreen() {
           prev = prev.concat(offsetAdvPrev);
         }
 
-        // filter by type param (optional)
+        // filter by type param
         if (typeParam) curr = curr.filter((r) => String(r.type) === typeParam);
         if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
 
@@ -591,7 +625,7 @@ export default function CashFlowTableScreen() {
             const acc = String(r.accountno || "").trim();
             const code = t === "Revenue" ? String(r.cc3code || "").trim() : String(r.auxcode || "").trim();
 
-            // club these accounts into one bucket by cc3code (only westwalk companies)
+            // club accounts
             if (t === "Revenue" && WESTWALK_COMPANIES.has(compParam) && CLUB_ACCOUNTS.has(acc)) {
               return `CLUB::${code}`;
             }
@@ -660,7 +694,7 @@ export default function CashFlowTableScreen() {
             } as RowItem);
           });
 
-          // group by company-component label (collapse/expand)
+          // group by component label (collapse/expand)
           const byComponent: Record<string, RowItem[]> = {};
           const groupLabelByKey: Record<string, string> = {};
 
@@ -719,13 +753,13 @@ export default function CashFlowTableScreen() {
         const revenueCollapsed = buildGrouped("Revenue");
         structured.push(...revenueCollapsed);
 
-        let revBudgetMonthly = Array(12).fill(0);
-        revenueCollapsed.forEach((r) => r.budgetMonthly?.forEach((b, i) => (revBudgetMonthly[i] += b)));
+        // revenue totals
+        const revBalances = Array(12).fill(0);
+        const revBudgetMonthly = Array(12).fill(0);
+        revenueCollapsed.forEach((r) => r.totalBalances?.forEach((v, i) => (revBalances[i] += v)));
+        revenueCollapsed.forEach((r) => r.budgetMonthly?.forEach((v, i) => (revBudgetMonthly[i] += v)));
 
         if (revenueCollapsed.length) {
-          const revBalances = Array(12).fill(0);
-          revenueCollapsed.forEach((r) => r.totalBalances?.forEach((b, i) => (revBalances[i] += b)));
-
           structured.push({
             isTotalRow: true,
             totalType: "Revenue",
@@ -744,13 +778,13 @@ export default function CashFlowTableScreen() {
         const costCollapsed = buildGrouped("Cost");
         structured.push(...costCollapsed);
 
-        let costBudgetMonthly = Array(12).fill(0);
-        costCollapsed.forEach((r) => r.budgetMonthly?.forEach((b, i) => (costBudgetMonthly[i] += b)));
+        // cost totals
+        const costBalances = Array(12).fill(0);
+        const costBudgetMonthly = Array(12).fill(0);
+        costCollapsed.forEach((r) => r.totalBalances?.forEach((v, i) => (costBalances[i] += v)));
+        costCollapsed.forEach((r) => r.budgetMonthly?.forEach((v, i) => (costBudgetMonthly[i] += v)));
 
         if (costCollapsed.length) {
-          const costBalances = Array(12).fill(0);
-          costCollapsed.forEach((r) => r.totalBalances?.forEach((b, i) => (costBalances[i] += b)));
-
           structured.push({
             isTotalRow: true,
             totalType: "Cost",
@@ -768,13 +802,11 @@ export default function CashFlowTableScreen() {
         // Net total
         const netBalancesA = Array(12)
           .fill(0)
-          .map((_, i) => {
-            const rev = revenueCollapsed.reduce((s, r) => s + (r.totalBalances?.[i] || 0), 0);
-            const cst = costCollapsed.reduce((s, r) => s + (r.totalBalances?.[i] || 0), 0);
-            return rev + cst;
-          });
+          .map((_, i) => (revBalances[i] || 0) + (costBalances[i] || 0));
 
-        const netBudgetMonthly = revBudgetMonthly.map((v, i) => v + (costBudgetMonthly[i] || 0));
+        const netBudgetMonthly = Array(12)
+          .fill(0)
+          .map((_, i) => (revBudgetMonthly[i] || 0) + (costBudgetMonthly[i] || 0));
 
         structured.push({
           isTotalRow: true,
@@ -852,12 +884,12 @@ export default function CashFlowTableScreen() {
         {isBudgetMode && (
           <>
             <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W }]}>
-              {Number(totalB).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              {Number(displayActualElseBudgetTotal(child)).toLocaleString("en-US", { maximumFractionDigits: 0 })}
             </Text>
 
             {months.map((_, i) => (
               <Text
-                key={`mch-${i}-B`}
+                key={`mch-${i}-AB`}
                 numberOfLines={1}
                 style={[
                   styles.cell,
@@ -865,7 +897,7 @@ export default function CashFlowTableScreen() {
                   DARK_GROUP_INDEX.has(i) && styles.darkBodyCell,
                 ]}
               >
-                {(bmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                {Number(displayActualElseBudget(child, i)).toLocaleString("en-US", { maximumFractionDigits: 0 })}
               </Text>
             ))}
           </>
@@ -890,15 +922,8 @@ export default function CashFlowTableScreen() {
   );
 
   const RightHeader = () => (
-    <ScrollView
-      ref={headerHRef}
-      horizontal
-      onScroll={onHeaderHScroll}
-      scrollEventThrottle={16}
-      showsHorizontalScrollIndicator
-    >
+    <ScrollView ref={headerHRef} horizontal onScroll={onHeaderHScroll} scrollEventThrottle={16} showsHorizontalScrollIndicator>
       <View style={[styles.headerRow, { width: rightContentWidth, height: HEADER_HEIGHT, backgroundColor: "#ffffff" }]}>
-        {/* YEARLY MODE: totals only */}
         {isYearlyMode && (
           <>
             <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W, fontWeight: "bold", textAlign: "center" }]}>
@@ -907,28 +932,21 @@ export default function CashFlowTableScreen() {
             <Text numberOfLines={1} style={[styles.cell, { width: PREV_W, fontWeight: "bold", textAlign: "center" }]}>
               Total (P)
             </Text>
-            <Text
-              numberOfLines={1}
-              style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold", textAlign: "center" }]}
-            >
+            <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold", textAlign: "center" }]}>
               Total (B)
             </Text>
           </>
         )}
 
-        {/* BUDGET MODE: Total(B) + months(B) */}
         {isBudgetMode && (
           <>
-            <Text
-              numberOfLines={1}
-              style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold", textAlign: "center" }]}
-            >
-              Total (B)
+            <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold", textAlign: "center" }]}>
+              Total (A/B)
             </Text>
 
             {months.map((m, i) => (
               <Text
-                key={`h-${m}-B`}
+                key={`h-${m}-AB`}
                 numberOfLines={1}
                 style={[
                   styles.cell,
@@ -936,7 +954,7 @@ export default function CashFlowTableScreen() {
                   DARK_GROUP_INDEX.has(i) && styles.darkBodyCell,
                 ]}
               >
-                {`${m} (B)`}
+                {`${m} (A/B)`}
               </Text>
             ))}
           </>
@@ -1036,13 +1054,12 @@ export default function CashFlowTableScreen() {
     );
   };
 
-  const renderBudgetMonths = (row: RowItem, weight: "normal" | "bold" | "600" = "normal", enableBanding = true) => {
-    const bmon = row.budgetMonthly ?? Array(12).fill(0);
+  const renderBudgetMonthsAB = (row: RowItem, weight: "normal" | "bold" | "600" = "normal", enableBanding = true) => {
     const cellWeight = weight === "bold" ? "bold" : weight === "600" ? ("600" as any) : "normal";
 
     return months.map((_, i) => (
       <Text
-        key={`row-b-${i}`}
+        key={`row-ab-${i}`}
         numberOfLines={1}
         style={[
           styles.cell,
@@ -1050,7 +1067,7 @@ export default function CashFlowTableScreen() {
           enableBanding && DARK_GROUP_INDEX.has(i) && styles.darkBodyCell,
         ]}
       >
-        {(bmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+        {Number(displayActualElseBudget(row, i)).toLocaleString("en-US", { maximumFractionDigits: 0 })}
       </Text>
     ));
   };
@@ -1088,9 +1105,9 @@ export default function CashFlowTableScreen() {
             {isBudgetMode && (
               <>
                 <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "600" }]}>
-                  {totalB.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                  {Number(displayActualElseBudgetTotal(item)).toLocaleString("en-US", { maximumFractionDigits: 0 })}
                 </Text>
-                {renderBudgetMonths(item, "600", true)}
+                {renderBudgetMonthsAB(item, "600", true)}
               </>
             )}
           </View>
@@ -1140,16 +1157,15 @@ export default function CashFlowTableScreen() {
           {isBudgetMode && (
             <>
               <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold" }]}>
-                {totalB.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                {Number(displayActualElseBudgetTotal(item)).toLocaleString("en-US", { maximumFractionDigits: 0 })}
               </Text>
-              {renderBudgetMonths(item, "bold", false)}
+              {renderBudgetMonthsAB(item, "bold", false)}
             </>
           )}
         </View>
       );
     }
 
-    // normal row
     return (
       <View style={[styles.bodyRow, { height: ROW_HEIGHT }]}>
         {isYearlyMode && (
@@ -1169,9 +1185,9 @@ export default function CashFlowTableScreen() {
         {isBudgetMode && (
           <>
             <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W }]}>
-              {totalB.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              {Number(displayActualElseBudgetTotal(item)).toLocaleString("en-US", { maximumFractionDigits: 0 })}
             </Text>
-            {renderBudgetMonths(item, "normal", true)}
+            {renderBudgetMonthsAB(item, "normal", true)}
           </>
         )}
       </View>
@@ -1205,15 +1221,7 @@ export default function CashFlowTableScreen() {
 
   return (
     <View style={styles.Container}>
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          paddingRight: 20,
-          borderBottomWidth: 1,
-        }}
-      >
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingRight: 20, borderBottomWidth: 1 }}>
         <CustomHeader title={`${compParam} - ${yearParam}`} />
         <CustomButton
           title="Export"
@@ -1270,10 +1278,7 @@ export default function CashFlowTableScreen() {
 
 // =================== STYLES ===================
 const styles = StyleSheet.create({
-  Container: {
-    flex: 1,
-    backgroundColor: Colors.White,
-  },
+  Container: { flex: 1, backgroundColor: Colors.White },
   headerRow: {
     paddingHorizontal: 10,
     flexDirection: "row",
@@ -1299,10 +1304,7 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     paddingHorizontal: 10,
   },
-  cell: {
-    textAlign: "center",
-    fontSize: width > 600 ? 12 : 12,
-  },
+  cell: { textAlign: "center", fontSize: width > 600 ? 12 : 12 },
   centered: {
     flex: 1,
     justifyContent: "center",
@@ -1310,7 +1312,5 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingHorizontal: 20,
   },
-  darkBodyCell: {
-    backgroundColor: "#EFEFEF",
-  },
+  darkBodyCell: { backgroundColor: "#EFEFEF" },
 });

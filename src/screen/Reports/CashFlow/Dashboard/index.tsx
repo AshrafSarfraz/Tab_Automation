@@ -73,10 +73,9 @@ const BudgtedDashboard = ({ navigation }: any) => {
 
 
     const onViewDetailsPress = () => {
-         navigation.navigate("TrialBalanceTable", {
+         navigation.navigate("CashFlowTableScreen", {
         company:selectedCompanyObj?.name || "",
         year: selectedYear,
-        mode: "budget",     
       });
     };
   

@@ -13,7 +13,6 @@ export default function WebViewScreen({ route }) {
     <View style={styles.container}>
      <View style={styles.header}>
         <CustomHeader title="Back" />
-        {/* <Text style={styles.heading}>{title} - LPO Details</Text> */}
       </View>
       <WebView
         source={{ uri: url }}
@@ -31,12 +30,7 @@ const styles = StyleSheet.create({
     backgroundColor:Colors.White
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    padding:20,
-    backgroundColor:Colors.PrimaryColor
+    borderBottomWidth: 0.4,
   },
   heading: {
     fontSize: 24,
