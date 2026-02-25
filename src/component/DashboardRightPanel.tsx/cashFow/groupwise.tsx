@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, Pressable, ScrollView } from "react-native";
 import { Colors } from "../../../themes/color";
-import CashFlowPnLSummaryCards from "../../companyCard/cashflowCard";
 import CashFlowGroupNetProfitChart from "../../CashFlowChart/groupReportChart/CashFlowgroupNetprofit";
 import CashFlowGroupRevenueChart from "../../CashFlowChart/groupReportChart/CashFlowgroupRevenue";
 import CashFlowGroupExpenseChart from "../../CashFlowChart/groupReportChart/CashFlowgroupExpense";

@@ -28,7 +28,7 @@ const companies = [
   { id: 5, name: "Assets Services Company", logo: Assets },
   { id: 6, name: "Uranus General Contracting Company WLL", logo: Uranisu },
   { id: 7, name: "West Walk Hotel Management", logo: Retaj },
-  { id: 8, name: "others", },
+  // { id: 8, name: "others", },
 
 ];
 
@@ -39,7 +39,7 @@ const MainDashboard = ({ navigation }: any) => {
   const MAX_WIDTH = 220;
 
   const defaultCompany =
-    companies.find((c) => c.name === "AL WESSIL HOLDING") || companies[0];
+    companies.find((c) => c.name === "Group Report") || companies[0];
 
   const [collapsed, setCollapsed] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(defaultCompany.id);

@@ -27,6 +27,7 @@ import GroupMonthlySummaryScreen from '../screen/Reports/Performance_Report/Grou
 import CashFlowDashboard from '../screen/Reports/CashFlow/Dashboard';
 import CashFlowTableScreen from '../screen/Reports/CashFlow/DetailsScreen';
 import AddProjects from '../screen/Reports/CashFlow/AddProjects';
+import CashFlowReportDetails1 from '../screen/Reports/CashFlow/GroupDetailReport';
 
 const Stack = createNativeStackNavigator();
 
@@ -77,12 +78,13 @@ const StackNavigation = () => {
        
         <Stack.Screen name="CashFlowDashboard" component={CashFlowDashboard} />
         <Stack.Screen name="CashFlowTableScreen" component={CashFlowTableScreen} />
+        <Stack.Screen name="CashFlowGroupTableScreen" component={CashFlowReportDetails1} />
         <Stack.Screen name="AddProjects" component={AddProjects} />
   
         <Stack.Screen name="Csvupload" component={CsvUploadScreen} />
         <Stack.Screen name="GroupMonthlySummaryScreen"   component={GroupMonthlySummaryScreen} />
 
-   
+
 
       </Stack.Navigator>
     </NavigationContainer>

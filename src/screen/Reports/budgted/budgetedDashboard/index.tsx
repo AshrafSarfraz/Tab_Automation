@@ -28,7 +28,7 @@ const companies = [
   { id: 4, name: "Assets Services Company", logo: Assets },
   { id: 5, name: "Uranus General Contracting Company WLL", logo: Uranisu },
   { id: 6, name: "West Walk Hotel Management", logo: Retaj },
-  { id: 7, name: "others", },
+  // { id: 7, name: "others", },
   // { id: 7, name: "Merchants Bridge Holdings Limited", logo: WWA },
 ];
 

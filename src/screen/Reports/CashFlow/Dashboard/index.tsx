@@ -66,12 +66,13 @@ const CashFlowDashboard = ({ navigation }: any) => {
     });
   };
 
-  const onViewDetailsPressGroup = () => {
+  const onViewDetailsPressGroup1 = () => {
     // ✅ apna group details screen lagao
     // example:
     // navigation.navigate("CashFlowGroupTableScreen", { year: selectedYear });
-    navigation.navigate("CashFlowTableScreen", {
-      company: "Group Report",
+    navigation.navigate("CashFlowGroupTableScreen", {
+      // company: "ALL",
+      mode: "budget",
       year: selectedYear,
     });
   };
@@ -169,7 +170,7 @@ const CashFlowDashboard = ({ navigation }: any) => {
             setShowYears={setShowYears}
             expandChart={expandChart}
             onExpandPress={onExpandPress}
-            onViewDetailsPress={onViewDetailsPressGroup}
+            onViewDetailsPress={onViewDetailsPressGroup1}
             onAddProjectsPress={onAddProjectsPress}
             collapsed={collapsed}
           />
