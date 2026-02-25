@@ -45,7 +45,7 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
+      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
       {loading && <Loader />}
       <Image source={Logo_c} style={styles.logo} />
       <TextInput placeholder="Email" style={styles.input} onChangeText={setEmail} />

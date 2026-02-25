@@ -1,28 +1,25 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal";
+import GroupedBarChart from "../GroupBarChart";
 
-import { getWestwalkMongoFromSQLite } from "../../database/westwalkTrailBal";
 
-import GroupedBarChart from "../Charts/GroupBarChart";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const FLIP_SIGN = -1; // cost ko positive dikhana
 
 // Westwalk companies
 const C_RE = "West Walk Real Estate";
 const C_ADV = "West Walk Advertisement";
 const C_ASSETS = "Assets Services Company";
 
-// ✅ SAME extractor pattern as TB screens (very important)
+// ✅ SAME extractor (TB wala)
 const extractRowsFromSnap = (snap: any): any[] => {
   const payload = snap?.data;
 
-  // othercmp snapshot: { savedAt, data: [ ... ] }
   if (Array.isArray(payload)) return payload;
-
-  // westwalk snapshot: { savedAt, data: { success, count, data:[...] } }
   if (payload && Array.isArray(payload.data)) return payload.data;
 
-  // extra safety
   if (Array.isArray(snap)) return snap;
   if (snap && Array.isArray(snap.data)) return snap.data;
 
@@ -34,7 +31,7 @@ const isValidMonth = (m?: number | null) => typeof m === "number" && m >= 1 && m
 const isRevenue = (r: any) => String(r.accountType || "").trim().toLowerCase() === "revenue";
 const isCost = (r: any) => String(r.accountType || "").trim().toLowerCase() === "cost";
 
-// sum by month (balanceFirst or budgetedAmount)
+// sum by month for balanceFirst / budgetedAmount
 function sumByMonth(
   rows: any[],
   company: string,
@@ -60,7 +57,7 @@ function sumByMonth(
   return out;
 }
 
-// net monthly (raw signed world): revenue + cost (cost usually negative)
+// net monthly: revenue + cost (cost usually negative)
 function netMonthly(rows: any[], company: string, year: number, field: "balanceFirst" | "budgetedAmount") {
   const rev = sumByMonth(rows, company, year, "Revenue", field);
   const cost = sumByMonth(rows, company, year, "Cost", field);
@@ -85,7 +82,7 @@ type Props = {
   isSidebarCollapsed?: boolean;
 };
 
-export default function GroupRevenueChart({
+export default function GroupExpenseChart({
   year,
   compareYear,
   height = 300,
@@ -97,7 +94,7 @@ export default function GroupRevenueChart({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // ✅ load BOTH snapshots always (Group report)
+
   useEffect(() => {
     let mounted = true;
 
@@ -125,7 +122,7 @@ export default function GroupRevenueChart({
     return () => (mounted = false);
   }, []);
 
-  // ✅ build company list from rows (for the selected years)
+  // ✅ company list
   const companies = useMemo(() => {
     const map = new Map<string, string>();
     rows.forEach((r) => {
@@ -137,16 +134,13 @@ export default function GroupRevenueChart({
     return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
   }, [rows]);
 
-  // ✅ IMPORTANT: Apply SAME consolidation/offset logic as AllCompaniesPnLTableScreen
-  function computeGroupRevenueMonthly(
-    field: "balanceFirst" | "budgetedAmount",
-    y: number
-  ) {
-    const groupRev = Array(12).fill(0);
+  // ✅ apply same rules, then return group COST monthly (as positive for chart)
+  function computeGroupExpenseMonthly(field: "balanceFirst" | "budgetedAmount", y: number) {
+    const groupCostSigned = Array(12).fill(0); // signed cost (normally negative)
 
     for (const cmp of companies) {
       let rev = sumByMonth(rows, cmp, y, "Revenue", field);
-      let cost = sumByMonth(rows, cmp, y, "Cost", field);
+      let cost = sumByMonth(rows, cmp, y, "Cost", field); // signed
 
       // 1) RE: add ADV net into RE revenue, add ASSETS net into RE cost
       if (cmp === C_RE) {
@@ -157,33 +151,36 @@ export default function GroupRevenueChart({
         cost = cost.map((v, i) => v + (assetsNet[i] || 0));
       }
 
-      // 2) ASSETS: make net=0 by adding (-net) into revenue  => rev = rev - net
+      // 2) ASSETS: make net=0 by adding (-net) into revenue => rev = rev - net
       if (cmp.trim().toLowerCase() === C_ASSETS.toLowerCase()) {
         const net = rev.map((v, i) => Number(v || 0) + Number(cost[i] || 0));
         rev = rev.map((v, i) => Number(v || 0) - Number(net[i] || 0));
+        // cost same
       }
 
       // 3) ADV: make net=0 by adding (-net) into cost => cost = cost - net
       if (cmp.trim().toLowerCase() === C_ADV.toLowerCase()) {
         const net = rev.map((v, i) => Number(v || 0) + Number(cost[i] || 0));
         cost = cost.map((v, i) => Number(v || 0) - Number(net[i] || 0));
+        // rev same
       }
 
-      // ✅ Now add this company revenue into group revenue
+      // ✅ add adjusted cost into group
       for (let i = 0; i < 12; i++) {
-        groupRev[i] += Number(rev[i] || 0);
+        groupCostSigned[i] += Number(cost[i] || 0);
       }
     }
 
-    return groupRev;
+    // chart wants positive expense
+    return groupCostSigned.map((v) => Number(v || 0) * FLIP_SIGN);
   }
 
   const chartData = useMemo(() => {
-    const actual = computeGroupRevenueMonthly("balanceFirst", year);
-    const budget = computeGroupRevenueMonthly("budgetedAmount", year);
+    const actual = computeGroupExpenseMonthly("balanceFirst", year);
+    const budget = computeGroupExpenseMonthly("budgetedAmount", year);
 
     const compare = compareYear
-      ? computeGroupRevenueMonthly("balanceFirst", compareYear)
+      ? computeGroupExpenseMonthly("balanceFirst", compareYear)
       : Array(12).fill(0);
 
     return MONTHS.map((label, i) => ({
@@ -195,10 +192,10 @@ export default function GroupRevenueChart({
   }, [rows, companies, year, compareYear]);
 
   const chartSeries = useMemo(() => {
-    const s: any[] = [{ key: "actualMain", label: `Actual ${year}`, color: "#1B5E20" }];
+    const s: any[] = [{ key: "actualMain", label: `Actual ${year}`, color: "#E53935" }];
 
     if (compareYear) {
-      s.push({ key: "actualCompare", label: `Actual ${compareYear}`, color: "#4CAF50" });
+      s.push({ key: "actualCompare", label: `Actual ${compareYear}`, color: "#EF9A9A" });
     }
 
     s.push({ key: "budgetMain", label: `Budget ${year}`, color: "#FF9800" });
@@ -224,7 +221,7 @@ export default function GroupRevenueChart({
     for (const row of chartData) {
       m = Math.max(m, Number(row.actualMain || 0));
       m = Math.max(m, Number(row.budgetMain || 0));
-      if (compareYear) m = Math.max(m, Number(row.actualCompare || 0));
+      if (compareYear) m = Math.max(m, Number((row as any).actualCompare || 0));
     }
     return niceMaxValue(m, expandChart);
   }, [chartData, compareYear, expandChart]);
@@ -247,7 +244,7 @@ export default function GroupRevenueChart({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Group Revenue</Text>
+      <Text style={styles.title}>Group Expense</Text>
 
       <View style={{ width: usedWidth }}>
         <GroupedBarChart
@@ -258,8 +255,8 @@ export default function GroupRevenueChart({
           barWidth={usedBarWidth}
           barGap={usedBarGap}
           groupGap={usedGroupGap}
-          showLegend
           showValuesOnTop={showValuesOnTop}
+          showLegend
           yAxisOffset={-45}
           valueFormatter={(v: number) =>
             `${(v / 1_000_000)

@@ -1,6 +1,6 @@
 // src/screens/RfpCompaniesScreen.tsx
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Dimensions, StatusBar } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import _ from 'lodash';
 import { Colors } from '../../../themes/color';
@@ -32,6 +32,7 @@ export default function RfpCompaniesScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
       <View style={styles.header}>
         <CustomHeader title="RFP Companies" />
       </View>

@@ -1,7 +1,7 @@
 
 // src/screens/SignupScreen.tsx
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, Image } from 'react-native';
+import { View, TextInput, StyleSheet, Image, StatusBar } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import CustomButton from '../../../component/customButton';
@@ -32,6 +32,7 @@ export default function SignupScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
       <Image source={Logo_c} style={styles.logo} />
       <TextInput placeholder="Username" style={styles.input} onChangeText={setUsername} />
       <TextInput placeholder="Company Seq" style={styles.input} onChangeText={setCmpseq} />

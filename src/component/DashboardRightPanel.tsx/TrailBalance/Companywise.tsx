@@ -5,11 +5,13 @@ import {
   Pressable,
   ScrollView,
 } from "react-native";
-import { Colors } from "../../themes/color";
-import GroupMonthlySummaryScreen from "../companyCard/groupReportCard";
-import GroupRevenueChart from "../groupReportChart/groupRevenue";
-import GroupExpenseChart from "../groupReportChart/groupExpense";
-import GroupNetProfitChart from "../groupReportChart/groupNetprofit";
+import PnLSummaryCards from "../../companyCard/TrailBalanceCard";
+import NetProfitChart from "../../Charts/NetProfitChart";
+import RevenueChart from "../../Charts/RevenueCharts";
+import ExpenseChart from "../../Charts/ExpenseChart";
+import RevenueCostNetProfitLineChart from "../../Charts/linechart";
+import { Colors } from "../../../themes/color";
+
 
 type Props = {
   styles: any;
@@ -31,7 +33,7 @@ type Props = {
   collapsed: boolean;
 };
 
-export default function GroupWisedRightPanel({
+export default function CompanyWisedRightPanel({
   styles,
   YEARS,
   selectedYear,
@@ -111,7 +113,7 @@ export default function GroupWisedRightPanel({
         onScrollBeginDrag={() => setShowYears(false)}
       >
         <View style={{ marginTop: 16 }}>
-          <GroupMonthlySummaryScreen year={selectedYear} />
+          <PnLSummaryCards company={selectedCompanyName} year={selectedYear} />
         </View>
 
         {/* Charts */}
@@ -121,21 +123,24 @@ export default function GroupWisedRightPanel({
             expandChart && styles.ChartContainerExpanded,
           ]}
         >
-          <GroupNetProfitChart
+          <NetProfitChart
+            company={selectedCompanyName}
             year={selectedYear}
             compareYear={selectedYear - 1}
             expandChart={expandChart}
             isSidebarCollapsed={collapsed}
           />
 
-          <GroupRevenueChart
+          <RevenueChart
+            company={selectedCompanyName}
             year={selectedYear}
             compareYear={selectedYear - 1}
             expandChart={expandChart}
             isSidebarCollapsed={collapsed}
           />
 
-          <GroupExpenseChart
+          <ExpenseChart
+            company={selectedCompanyName}
             year={selectedYear}
             compareYear={selectedYear - 1}
             expandChart={expandChart}
@@ -143,14 +148,14 @@ export default function GroupWisedRightPanel({
           />
         </View>
 
-        {/* <View style={{ paddingHorizontal: 20 }}>
+        <View style={{ paddingHorizontal: 20 }}>
           <RevenueCostNetProfitLineChart
             company={selectedCompanyName}
             year={selectedYear}
             expandChart={expandChart}
             isSidebarCollapsed={collapsed}
           />
-        </View> */}
+        </View>
       </ScrollView>
 
       {/* Overlay */}

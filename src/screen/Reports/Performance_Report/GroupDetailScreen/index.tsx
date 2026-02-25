@@ -9,6 +9,7 @@ import {
   ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  StatusBar,
 } from "react-native";
 
 import { getWestwalkMongoFromSQLite } from "../../../../database/westwalkTrailBal"; // ✅ ONLY ONE API
@@ -448,6 +449,7 @@ export default function AllCompaniesPnLTableScreen() {
 
   return (
     <View style={styles.Container}>
+      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingRight: 20, borderBottomWidth: 1 }}>
         <CustomHeader title={`All Companies - ${yearParam}`} />
       </View>

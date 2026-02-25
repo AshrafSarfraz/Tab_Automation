@@ -28,6 +28,7 @@ const companies = [
   { id: 4, name: "Assets Services Company", logo: Assets },
   { id: 5, name: "Uranus General Contracting Company WLL", logo: Uranisu },
   { id: 6, name: "West Walk Hotel Management", logo: Retaj },
+  { id: 7, name: "others", },
   // { id: 7, name: "Merchants Bridge Holdings Limited", logo: WWA },
 ];
 
@@ -42,7 +43,7 @@ const BudgtedDashboard = ({ navigation }: any) => {
 
   const [collapsed, setCollapsed] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(defaultCompany.id);
-  const [selectedYear, setSelectedYear] = useState(2025);
+  const [selectedYear, setSelectedYear] = useState(2026);
   const [showYears, setShowYears] = useState(false);
 
   // ✅ NEW: expand chart toggle
@@ -83,7 +84,7 @@ const BudgtedDashboard = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
+    <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
 
       <View style={styles.Container}>
         {/* ================= LEFT SIDEBAR (FIXED) ================= */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, StatusBar } from 'react-native';
 import { WebView } from 'react-native-webview';
 import CustomHeader from '../../../component/customHeader';
 import { Colors } from '../../../themes/color';
@@ -11,6 +11,7 @@ export default function WebViewScreen({ route }) {
 
   return (
     <View style={styles.container}>
+      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
      <View style={styles.header}>
         <CustomHeader title="Back" />
       </View>

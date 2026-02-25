@@ -1,16 +1,13 @@
 import React from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-} from "react-native";
-import { Colors } from "../../themes/color";
-import PnLSummaryCards from "../companyCard/TrailBalanceCard";
-import NetProfitChart from "../Charts/NetProfitChart";
-import RevenueChart from "../Charts/RevenueCharts";
-import ExpenseChart from "../Charts/ExpenseChart";
-import RevenueCostNetProfitLineChart from "../Charts/linechart";
+import { View, Text, Pressable, ScrollView } from "react-native";
+import { Colors } from "../../../themes/color";
+import CashFlowPnLSummaryCards from "../../companyCard/cashflowCard";
+import CashFlowGroupNetProfitChart from "../../CashFlowChart/groupReportChart/CashFlowgroupNetprofit";
+import CashFlowGroupRevenueChart from "../../CashFlowChart/groupReportChart/CashFlowgroupRevenue";
+import CashFlowGroupExpenseChart from "../../CashFlowChart/groupReportChart/CashFlowgroupExpense";
+import CashFlowGroupPnLSummaryCards from "../../companyCard/cashflowGroupCard";
+
+
 
 type Props = {
   styles: any;
@@ -26,13 +23,12 @@ type Props = {
   onExpandPress: () => void;
 
   onViewDetailsPress: () => void;
-
-  selectedCompanyName: string;
+  onAddProjectsPress: () => void;
 
   collapsed: boolean;
 };
 
-export default function CompanyWisedRightPanel({
+export default function CashFlowGroupWiseRightPanel({
   styles,
   YEARS,
   selectedYear,
@@ -42,7 +38,7 @@ export default function CompanyWisedRightPanel({
   expandChart,
   onExpandPress,
   onViewDetailsPress,
-  selectedCompanyName,
+  onAddProjectsPress,
   collapsed,
 }: Props) {
   return (
@@ -51,18 +47,25 @@ export default function CompanyWisedRightPanel({
       <View style={styles.topBar}>
         <View style={styles.yearWrap}>
           <Text style={styles.label}>Year:</Text>
-
-          <Pressable
-            style={styles.yearBox}
-            onPress={() => setShowYears((p: boolean) => !p)}
-          >
+          <Pressable style={styles.yearBox} onPress={() => setShowYears((p: boolean) => !p)}>
             <Text style={styles.yearText}>{selectedYear}</Text>
             <Text>{showYears ? "▲" : "▼"}</Text>
           </Pressable>
         </View>
 
-        {/* Buttons */}
         <View style={styles.actionsWrap}>
+          <Pressable
+            style={[
+              styles.actionBtn,
+              { backgroundColor: "#fff", borderColor: Colors.PrimaryColor, borderWidth: 2 },
+            ]}
+            onPress={onAddProjectsPress}
+          >
+            <Text style={[styles.actionText, { color: Colors.PrimaryColor }]}>
+              Add Projects
+            </Text>
+          </Pressable>
+
           <Pressable style={styles.actionBtn} onPress={onExpandPress}>
             <Text style={styles.actionText}>
               {expandChart ? "Collapse Chart" : "Expand Chart"}
@@ -90,10 +93,7 @@ export default function CompanyWisedRightPanel({
               <Text
                 style={[
                   styles.dropText,
-                  y === selectedYear && {
-                    fontWeight: "800",
-                    color: Colors.PrimaryColor,
-                  },
+                  y === selectedYear && { fontWeight: "800", color: Colors.PrimaryColor },
                 ]}
               >
                 {y}
@@ -103,7 +103,7 @@ export default function CompanyWisedRightPanel({
         </View>
       )}
 
-      {/* Scroll Content */}
+      {/* Scroll */}
       <ScrollView
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
@@ -112,44 +112,28 @@ export default function CompanyWisedRightPanel({
         onScrollBeginDrag={() => setShowYears(false)}
       >
         <View style={{ marginTop: 16 }}>
-          <PnLSummaryCards company={selectedCompanyName} year={selectedYear} />
+          {/* ✅ Replace this with GroupCashFlowSummaryCards if you have */}
+          <CashFlowGroupPnLSummaryCards company={"ALL"} year={selectedYear} />
         </View>
 
-        {/* Charts */}
-        <View
-          style={[
-            styles.ChartContainer,
-            expandChart && styles.ChartContainerExpanded,
-          ]}
-        >
-          <NetProfitChart
-            company={selectedCompanyName}
+        <View style={[styles.ChartContainer, expandChart && styles.ChartContainerExpanded]}>
+          {/* ✅ Replace these with Group charts if you have */}
+          <CashFlowGroupNetProfitChart
+            company={"ALL"}
             year={selectedYear}
-            compareYear={selectedYear - 1}
             expandChart={expandChart}
             isSidebarCollapsed={collapsed}
           />
 
-          <RevenueChart
-            company={selectedCompanyName}
+          <CashFlowGroupRevenueChart
+            company={"ALL"}
             year={selectedYear}
-            compareYear={selectedYear - 1}
             expandChart={expandChart}
             isSidebarCollapsed={collapsed}
           />
 
-          <ExpenseChart
-            company={selectedCompanyName}
-            year={selectedYear}
-            compareYear={selectedYear - 1}
-            expandChart={expandChart}
-            isSidebarCollapsed={collapsed}
-          />
-        </View>
-
-        <View style={{ paddingHorizontal: 20 }}>
-          <RevenueCostNetProfitLineChart
-            company={selectedCompanyName}
+          <CashFlowGroupExpenseChart
+            company={"ALL"}
             year={selectedYear}
             expandChart={expandChart}
             isSidebarCollapsed={collapsed}
@@ -157,13 +141,7 @@ export default function CompanyWisedRightPanel({
         </View>
       </ScrollView>
 
-      {/* Overlay */}
-      {showYears && (
-        <Pressable
-          style={styles.overlay}
-          onPress={() => setShowYears(false)}
-        />
-      )}
+      {showYears && <Pressable style={styles.overlay} onPress={() => setShowYears(false)} />}
     </View>
   );
 }

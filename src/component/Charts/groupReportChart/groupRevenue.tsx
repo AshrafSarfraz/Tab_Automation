@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal";
+import GroupedBarChart from "../GroupBarChart";
 
-import { getWestwalkMongoFromSQLite } from "../../database/westwalkTrailBal";
 
-import GroupedBarChart from "../Charts/GroupBarChart";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -12,13 +12,17 @@ const C_RE = "West Walk Real Estate";
 const C_ADV = "West Walk Advertisement";
 const C_ASSETS = "Assets Services Company";
 
-// ✅ SAME extractor as TB
+// ✅ SAME extractor pattern as TB screens (very important)
 const extractRowsFromSnap = (snap: any): any[] => {
   const payload = snap?.data;
 
+  // othercmp snapshot: { savedAt, data: [ ... ] }
   if (Array.isArray(payload)) return payload;
+
+  // westwalk snapshot: { savedAt, data: { success, count, data:[...] } }
   if (payload && Array.isArray(payload.data)) return payload.data;
 
+  // extra safety
   if (Array.isArray(snap)) return snap;
   if (snap && Array.isArray(snap.data)) return snap.data;
 
@@ -26,10 +30,11 @@ const extractRowsFromSnap = (snap: any): any[] => {
 };
 
 const isValidMonth = (m?: number | null) => typeof m === "number" && m >= 1 && m <= 12;
+
 const isRevenue = (r: any) => String(r.accountType || "").trim().toLowerCase() === "revenue";
 const isCost = (r: any) => String(r.accountType || "").trim().toLowerCase() === "cost";
 
-// sum by month for balanceFirst / budgetedAmount (SIGNED cost)
+// sum by month (balanceFirst or budgetedAmount)
 function sumByMonth(
   rows: any[],
   company: string,
@@ -55,7 +60,7 @@ function sumByMonth(
   return out;
 }
 
-// net monthly: revenue + cost (cost is signed negative normally)
+// net monthly (raw signed world): revenue + cost (cost usually negative)
 function netMonthly(rows: any[], company: string, year: number, field: "balanceFirst" | "budgetedAmount") {
   const rev = sumByMonth(rows, company, year, "Revenue", field);
   const cost = sumByMonth(rows, company, year, "Cost", field);
@@ -80,7 +85,7 @@ type Props = {
   isSidebarCollapsed?: boolean;
 };
 
-export default function GroupNetProfitChart({
+export default function GroupRevenueChart({
   year,
   compareYear,
   height = 300,
@@ -92,7 +97,7 @@ export default function GroupNetProfitChart({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // ✅ load BOTH snapshots always (Group)
+  // ✅ load BOTH snapshots always (Group report)
   useEffect(() => {
     let mounted = true;
 
@@ -120,7 +125,7 @@ export default function GroupNetProfitChart({
     return () => (mounted = false);
   }, []);
 
-  // ✅ unique companies
+  // ✅ build company list from rows (for the selected years)
   const companies = useMemo(() => {
     const map = new Map<string, string>();
     rows.forEach((r) => {
@@ -132,15 +137,18 @@ export default function GroupNetProfitChart({
     return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
   }, [rows]);
 
-  // ✅ apply same rules and return GROUP net (monthly)
-  function computeGroupNetMonthly(field: "balanceFirst" | "budgetedAmount", y: number) {
-    const groupNet = Array(12).fill(0);
+  // ✅ IMPORTANT: Apply SAME consolidation/offset logic as AllCompaniesPnLTableScreen
+  function computeGroupRevenueMonthly(
+    field: "balanceFirst" | "budgetedAmount",
+    y: number
+  ) {
+    const groupRev = Array(12).fill(0);
 
     for (const cmp of companies) {
       let rev = sumByMonth(rows, cmp, y, "Revenue", field);
-      let cost = sumByMonth(rows, cmp, y, "Cost", field); // signed
+      let cost = sumByMonth(rows, cmp, y, "Cost", field);
 
-      // 1) RE: add ADV net to revenue, add ASSETS net to cost
+      // 1) RE: add ADV net into RE revenue, add ASSETS net into RE cost
       if (cmp === C_RE) {
         const advNet = netMonthly(rows, C_ADV, y, field);
         const assetsNet = netMonthly(rows, C_ASSETS, y, field);
@@ -149,54 +157,51 @@ export default function GroupNetProfitChart({
         cost = cost.map((v, i) => v + (assetsNet[i] || 0));
       }
 
-      // 2) ASSETS: make net=0 by adjusting revenue (rev = rev - net)
+      // 2) ASSETS: make net=0 by adding (-net) into revenue  => rev = rev - net
       if (cmp.trim().toLowerCase() === C_ASSETS.toLowerCase()) {
         const net = rev.map((v, i) => Number(v || 0) + Number(cost[i] || 0));
         rev = rev.map((v, i) => Number(v || 0) - Number(net[i] || 0));
       }
 
-      // 3) ADV: make net=0 by adjusting cost (cost = cost - net)
+      // 3) ADV: make net=0 by adding (-net) into cost => cost = cost - net
       if (cmp.trim().toLowerCase() === C_ADV.toLowerCase()) {
         const net = rev.map((v, i) => Number(v || 0) + Number(cost[i] || 0));
         cost = cost.map((v, i) => Number(v || 0) - Number(net[i] || 0));
       }
 
-      // final net for this company
-      const net = rev.map((v, i) => Number(v || 0) + Number(cost[i] || 0));
-
-      // add to group
+      // ✅ Now add this company revenue into group revenue
       for (let i = 0; i < 12; i++) {
-        groupNet[i] += Number(net[i] || 0);
+        groupRev[i] += Number(rev[i] || 0);
       }
     }
 
-    return groupNet;
+    return groupRev;
   }
 
   const chartData = useMemo(() => {
-    const netMain = computeGroupNetMonthly("balanceFirst", year);
-    const netBudget = computeGroupNetMonthly("budgetedAmount", year);
+    const actual = computeGroupRevenueMonthly("balanceFirst", year);
+    const budget = computeGroupRevenueMonthly("budgetedAmount", year);
 
-    const netPrev = compareYear
-      ? computeGroupNetMonthly("balanceFirst", compareYear)
+    const compare = compareYear
+      ? computeGroupRevenueMonthly("balanceFirst", compareYear)
       : Array(12).fill(0);
 
     return MONTHS.map((label, i) => ({
       label,
-      netMain: Number(netMain[i] || 0),
-      ...(compareYear ? { netPrev: Number(netPrev[i] || 0) } : {}),
-      netBudget: Number(netBudget[i] || 0),
+      actualMain: Number(actual[i] || 0),
+      ...(compareYear ? { actualCompare: Number(compare[i] || 0) } : {}),
+      budgetMain: Number(budget[i] || 0),
     }));
   }, [rows, companies, year, compareYear]);
 
   const chartSeries = useMemo(() => {
-    const s: any[] = [{ key: "netMain", label: `Net Profit ${year}`, color: "#7B1FA2" }];
+    const s: any[] = [{ key: "actualMain", label: `Actual ${year}`, color: "#1B5E20" }];
 
     if (compareYear) {
-      s.push({ key: "netPrev", label: `Net Profit ${compareYear}`, color: "#CE93D8" });
+      s.push({ key: "actualCompare", label: `Actual ${compareYear}`, color: "#4CAF50" });
     }
 
-    s.push({ key: "netBudget", label: `Budget ${year}`, color: "#FF9800" });
+    s.push({ key: "budgetMain", label: `Budget ${year}`, color: "#FF9800" });
     return s;
   }, [year, compareYear]);
 
@@ -217,9 +222,9 @@ export default function GroupNetProfitChart({
   const dynamicMaxValue = useMemo(() => {
     let m = 0;
     for (const row of chartData) {
-      m = Math.max(m, Math.abs(Number(row.netMain || 0)));
-      m = Math.max(m, Math.abs(Number(row.netBudget || 0)));
-      if (compareYear) m = Math.max(m, Math.abs(Number((row as any).netPrev || 0)));
+      m = Math.max(m, Number(row.actualMain || 0));
+      m = Math.max(m, Number(row.budgetMain || 0));
+      if (compareYear) m = Math.max(m, Number(row.actualCompare || 0));
     }
     return niceMaxValue(m, expandChart);
   }, [chartData, compareYear, expandChart]);
@@ -242,7 +247,7 @@ export default function GroupNetProfitChart({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Group Net Profit</Text>
+      <Text style={styles.title}>Group Revenue</Text>
 
       <View style={{ width: usedWidth }}>
         <GroupedBarChart

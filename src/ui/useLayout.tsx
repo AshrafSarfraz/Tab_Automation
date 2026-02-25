@@ -42,6 +42,7 @@ export default function Container({
         barStyle={statusBarStyle}
         backgroundColor={statusBarColor}
         translucent={false}
+        hidden={false}
       />
 
       {/* ✅ Status bar area paint */}

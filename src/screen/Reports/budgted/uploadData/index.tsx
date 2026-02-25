@@ -158,6 +158,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  StatusBar,
 } from "react-native";
 import { pick, isCancel, types } from "@react-native-documents/picker";
 import { Picker } from "@react-native-picker/picker";
@@ -282,6 +283,7 @@ export default function CsvUploadScreen() {
 
   return (
     <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
+     <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
       <View style={styles.headerWrap}>
         <CustomHeader title="Upload Data" />
       </View>

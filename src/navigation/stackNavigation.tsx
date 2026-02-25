@@ -17,15 +17,16 @@ import CompanyLpo from '../screen/LPO/companies';
 
 import ReportSelection from '../screen/Reports/reportSelection';
 import mainDashboard from '../screen/Reports/Performance_Report/mainDashboard';
-import Trial from '../screen';
+
 import TrialBalanceTableScreen from '../screen/Reports/Performance_Report/DetailsScreen';
 import CsvUploadScreen from '../screen/Reports/budgted/uploadData';
 import BudgtedDashboard from '../screen/Reports/budgted/budgetedDashboard';
 import RfpCompaniesScreen from '../screen/RFP/RFP_Companies';
 import RfpListByCompany from '../screen/RFP/RFP_List';
-import GroupMonthlySummaryScreen from '../screen/Reports/Performance_Report/GroupReport';
+import GroupMonthlySummaryScreen from '../screen/Reports/Performance_Report/GroupDetailScreen';
 import CashFlowDashboard from '../screen/Reports/CashFlow/Dashboard';
 import CashFlowTableScreen from '../screen/Reports/CashFlow/DetailsScreen';
+import AddProjects from '../screen/Reports/CashFlow/AddProjects';
 
 const Stack = createNativeStackNavigator();
 
@@ -76,14 +77,13 @@ const StackNavigation = () => {
        
         <Stack.Screen name="CashFlowDashboard" component={CashFlowDashboard} />
         <Stack.Screen name="CashFlowTableScreen" component={CashFlowTableScreen} />
-        
+        <Stack.Screen name="AddProjects" component={AddProjects} />
   
-
         <Stack.Screen name="Csvupload" component={CsvUploadScreen} />
         <Stack.Screen name="GroupMonthlySummaryScreen"   component={GroupMonthlySummaryScreen} />
 
    
-        <Stack.Screen name="Trial" component={Trial} />
+
       </Stack.Navigator>
     </NavigationContainer>
   );

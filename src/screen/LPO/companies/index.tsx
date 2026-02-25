@@ -7,6 +7,7 @@ import {
   StyleSheet,
   FlatList,
   Dimensions,
+  StatusBar,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import _ from 'lodash';
@@ -39,6 +40,7 @@ export default function CompanyLpo() {
 
   return (
     <View style={styles.container}>
+      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
       <View style={styles.header}>
         <CustomHeader title="Companies" />
       </View>

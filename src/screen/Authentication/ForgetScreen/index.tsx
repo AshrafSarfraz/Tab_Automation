@@ -1,7 +1,7 @@
 
 // src/screens/ForgotPasswordScreen.tsx
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, Image, Alert } from 'react-native';
+import { View, TextInput, StyleSheet, Image, Alert, StatusBar } from 'react-native';
 import auth from '@react-native-firebase/auth';
 import CustomButton from '../../../component/customButton';
 import { Colors } from '../../../themes/color';
@@ -23,6 +23,7 @@ export default function ForgotPasswordScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
       <Image source={Logo_c} style={styles.logo} />
       <TextInput placeholder="Enter your email" style={styles.input} onChangeText={setEmail} />
       <CustomButton title="Send Reset Link" onPress={handleReset} />

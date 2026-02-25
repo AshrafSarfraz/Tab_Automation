@@ -7,6 +7,7 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
+  StatusBar,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { Colors } from '../../../themes/color';
@@ -27,6 +28,7 @@ export default function LpoListScreen({ navigation }: any) {
 
     return (
       <View style={styles.card}>
+        <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
         {/* Top Row */}
         <View style={styles.topRow}>
           <View style={{ flex: 1 }}>
