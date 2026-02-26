@@ -177,7 +177,6 @@ const MainDashboard = ({ navigation }: any) => {
      expandChart={expandChart}
      onExpandPress={onExpandPress}
      onViewDetailsPress={onViewDetailsPress2}
-  
      collapsed={collapsed}
    />}
      

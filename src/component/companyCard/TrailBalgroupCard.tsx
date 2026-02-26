@@ -2,7 +2,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { getWestwalkMongoFromSQLite } from "../../database/westwalkTrailBal"; // ✅ SINGLE API ONLY
 
+// ✅ Westwalk companies (same as table)
+const C_RE = "West Walk Real Estate";
+const C_ADV = "West Walk Advertisement";
+const C_ASSETS = "Assets Services Company";
+
 type Row = {
+  company?: string; // ✅ add company (optional, safe)
   year?: number;
   month?: number;
   accountType?: string; // "Revenue" | "Cost"
@@ -29,6 +35,10 @@ const extractRowsFromSnap = (snap: any): Row[] => {
 const fmt0 = (n: number) =>
   Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
 
+const normCompany = (c: any) => String(c || "").trim().toLowerCase();
+const isCompany = (rowCompany: any, target: string) =>
+  normCompany(rowCompany) === normCompany(target);
+
 export default function GroupYearlySummaryCards({ year }: Props) {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<Row[]>([]);
@@ -45,7 +55,6 @@ export default function GroupYearlySummaryCards({ year }: Props) {
 
         // ✅ ONE API CALL
         const snap = await getWestwalkMongoFromSQLite();
-
         const allRows = extractRowsFromSnap(snap);
 
         if (mounted) setRows(allRows);
@@ -65,25 +74,60 @@ export default function GroupYearlySummaryCards({ year }: Props) {
     };
   }, []);
 
+  // ✅ Consolidation applied here:
+  // - ADV + ASSETS will still be "used" in totals, but their values won't double-count as separate companies
+  // - ADV net goes into Revenue bucket
+  // - ASSETS net goes into Cost bucket
   const { revenue, cost, net, count } = useMemo(() => {
     const selectedYear = Number(year);
     const yearRows = (rows || []).filter((r) => Number(r.year) === selectedYear);
 
-    let revenue = 0;
-    let cost = 0;
+    let baseRevenue = 0; // all companies EXCEPT ADV + ASSETS
+    let baseCost = 0;
+
+    let advRevenue = 0;
+    let advCost = 0;
+
+    let assetsRevenue = 0;
+    let assetsCost = 0;
 
     for (const r of yearRows) {
       const t = String(r.accountType || "").trim().toLowerCase();
       const val = Number(r.balanceFirst || 0);
 
-      if (t === "revenue") revenue += val;
-      if (t === "cost") cost += val; // cost is signed already (usually negative)
+      const isAdv = isCompany(r.company, C_ADV);
+      const isAssets = isCompany(r.company, C_ASSETS);
+
+      // collect ADV/ASSETS separately (so we can consolidate into West Walk view)
+      if (isAdv) {
+        if (t === "revenue") advRevenue += val;
+        if (t === "cost") advCost += val;
+        continue;
+      }
+
+      if (isAssets) {
+        if (t === "revenue") assetsRevenue += val;
+        if (t === "cost") assetsCost += val;
+        continue;
+      }
+
+      // everything else stays as-is
+      if (t === "revenue") baseRevenue += val;
+      if (t === "cost") baseCost += val;
     }
+
+    const advNet = advRevenue + advCost; // cost already signed
+    const assetsNet = assetsRevenue + assetsCost;
+
+    // ✅ consolidated buckets (matches your table logic)
+    const revenue = baseRevenue + advNet;
+    const cost = baseCost + assetsNet;
+    const net = revenue + cost;
 
     return {
       revenue,
       cost,
-      net: revenue + cost,
+      net,
       count: yearRows.length,
     };
   }, [rows, year]);
@@ -125,6 +169,7 @@ export default function GroupYearlySummaryCards({ year }: Props) {
           </Text>
         </View>
       </View>
+
       {/* optional debug */}
       {/* <Text style={styles.subTitle}>Rows: {count}</Text> */}
     </View>

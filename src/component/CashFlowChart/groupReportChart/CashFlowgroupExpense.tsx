@@ -10,7 +10,11 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 const FLIP_SIGN = -1;
 
 const C_RE = "West Walk Real Estate";
+const C_ADV = "West Walk Advertisement";
 const C_ASSETS = "Assets Services Company";
+
+// ✅ companies that must show as ZERO (CashFlow1 rule)
+const ZERO_COMPANIES = new Set([C_ADV, C_ASSETS]);
 
 // ✅ add ALL option
 export const ALL_COMPANIES = "ALL";
@@ -34,14 +38,21 @@ function sumByMonthRaw(
   company: string | null,
   year: number,
   predicate: (r: any) => boolean,
-  field: "balanceFirst" | "budgetedAmount"
+  field: "balanceFirst" | "budgetedAmount",
+  opts?: { excludeCompaniesNorm?: Set<string> }
 ) {
   const out = Array(12).fill(0);
   const c = company ? norm(company) : null;
+  const exclude = opts?.excludeCompaniesNorm;
 
   for (const r of rows || []) {
+    const rCompanyNorm = norm(r.company);
+
     // ✅ company filter only when company provided
-    if (c && norm(r.company) !== c) continue;
+    if (c && rCompanyNorm !== c) continue;
+
+    // ✅ exclude some companies (used for ALL mode like CashFlow1)
+    if (!c && exclude && exclude.has(rCompanyNorm)) continue;
 
     if (Number(r.year) !== Number(year)) continue;
     if (!predicate(r)) continue;
@@ -54,15 +65,13 @@ function sumByMonthRaw(
   return out;
 }
 
-const revenueRaw = (rows: any[], company: string | null, year: number) =>
-  sumByMonthRaw(rows, company, year, isRevenue, "balanceFirst");
+const costRaw = (rows: any[], company: string | null, year: number, opts?: { excludeCompaniesNorm?: Set<string> }) =>
+  sumByMonthRaw(rows, company, year, isCost, "balanceFirst", opts);
 
-const costRaw = (rows: any[], company: string | null, year: number) =>
-  sumByMonthRaw(rows, company, year, isCost, "balanceFirst"); // usually negative
+const budgetCostRaw = (rows: any[], company: string | null, year: number, opts?: { excludeCompaniesNorm?: Set<string> }) =>
+  sumByMonthRaw(rows, company, year, isCost, "budgetedAmount", opts);
 
-const budgetCostRaw = (rows: any[], company: string | null, year: number) =>
-  sumByMonthRaw(rows, company, year, isCost, "budgetedAmount");
-
+// ✅ TrialBalance net rule (Revenue + Cost), raw world
 const netRaw = (
   rows: any[],
   company: string | null,
@@ -71,7 +80,7 @@ const netRaw = (
 ) => {
   const rev = sumByMonthRaw(rows, company, year, isRevenue, field);
   const cst = sumByMonthRaw(rows, company, year, isCost, field);
-  return rev.map((v, i) => Number(v || 0) + Number(cst[i] || 0)); // ✅ TrialBalance rule
+  return rev.map((v, i) => Number(v || 0) + Number(cst[i] || 0));
 };
 
 function niceMaxValue(max: number, expandChart: boolean) {
@@ -131,38 +140,52 @@ export default function CashFlowGroupExpenseChart({
 
   const chartData = useMemo(() => {
     const allMode = norm(company) === norm(ALL_COMPANIES);
-
-    // ✅ ALL => no company filter
     const companyFilter: string | null = allMode ? null : company;
 
-    // ✅ Actual expense RAW (cost raw)
-    let actualCostRaw = costRaw(rows, companyFilter, year);
+    // ✅ normalize exclude set (CashFlow1: ADV + ASSETS shown but forced to ZERO)
+    const excludeCompaniesNorm = new Set(Array.from(ZERO_COMPANIES).map((c) => norm(c)));
 
-    // ✅ Budget expense RAW
-    let budgetCost = budgetCostRaw(rows, companyFilter, year);
+    const selectedIsZeroCompany = !allMode && excludeCompaniesNorm.has(norm(company));
 
-    // ✅ RE adjustment (match TrialBalance) ONLY when single-company RE
-    const isRE = !allMode && norm(company) === norm(C_RE);
-
-    // add Assets NET (rev + cost raw) into RE cost
-    if (isRE) {
-      const assetsNetA = netRaw(rows, C_ASSETS, year, "balanceFirst");
-      actualCostRaw = actualCostRaw.map(
-        (v, i) => Number(v || 0) + Number(assetsNetA[i] || 0)
-      );
-
-      const assetsNetB = netRaw(rows, C_ASSETS, year, "budgetedAmount");
-      budgetCost = budgetCost.map(
-        (v, i) => Number(v || 0) + Number(assetsNetB[i] || 0)
-      );
+    // ✅ 1) If selected company is ADV/ASSETS => force ZERO like CashFlow1 rows
+    if (selectedIsZeroCompany) {
+      return MONTHS.map((label) => ({ label, actualMain: 0, budgetMain: 0 }));
     }
 
-    // ✅ Convert to DISPLAY positive expense (only at the end)
+    // ✅ 2) Actual/Budget cost RAW
+    // - ALL mode: exclude ADV + ASSETS from direct sum (CashFlow1 rule)
+    // - single company: normal filter
+    let actualCostRaw = costRaw(
+      rows,
+      companyFilter,
+      year,
+      allMode ? { excludeCompaniesNorm } : undefined
+    );
+
+    let budgetCost = budgetCostRaw(
+      rows,
+      companyFilter,
+      year,
+      allMode ? { excludeCompaniesNorm } : undefined
+    );
+
+    // ✅ 3) Transfer ASSETS net into RE cost (FM COST) — CashFlow1 parity
+    // - when single-company RE
+    // - OR when ALL companies combined (because totals include RE + FM COST once)
+    const isRE = !allMode && norm(company) === norm(C_RE);
+    if (isRE || allMode) {
+      const assetsNetA = netRaw(rows, C_ASSETS, year, "balanceFirst");
+      actualCostRaw = actualCostRaw.map((v, i) => Number(v || 0) + Number(assetsNetA[i] || 0));
+
+      const assetsNetB = netRaw(rows, C_ASSETS, year, "budgetedAmount");
+      budgetCost = budgetCost.map((v, i) => Number(v || 0) + Number(assetsNetB[i] || 0));
+    }
+
+    // ✅ 4) Convert to DISPLAY positive expense (only at the end)
     const actualDisp = actualCostRaw.map((v) => Number(v || 0) * FLIP_SIGN);
     const budgetDisp = budgetCost.map((v) => Number(v || 0) * FLIP_SIGN);
 
-    // ✅ "budget zero if actual exists" rule:
-    // if there is ANY actual entry (non-zero raw) in that month, budget = 0
+    // ✅ 5) "budget zero if actual exists" rule (raw check)
     return MONTHS.map((label, i) => {
       const actual = Number(actualDisp[i] || 0);
       const hasActual = Math.abs(Number(actualCostRaw[i] || 0)) > 0.000001; // raw check

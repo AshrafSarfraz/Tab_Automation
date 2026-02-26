@@ -5,6 +5,7 @@ import CashFlowGroupNetProfitChart from "../../CashFlowChart/groupReportChart/Ca
 import CashFlowGroupRevenueChart from "../../CashFlowChart/groupReportChart/CashFlowgroupRevenue";
 import CashFlowGroupExpenseChart from "../../CashFlowChart/groupReportChart/CashFlowgroupExpense";
 import CashFlowGroupPnLSummaryCards from "../../companyCard/cashflowGroupCard";
+import NetIncomeOpeningClosingTable from "../../Open-CloseBalance";
 
 
 
@@ -138,6 +139,9 @@ export default function CashFlowGroupWiseRightPanel({
             isSidebarCollapsed={collapsed}
           />
         </View>
+        <View style={{ padding: 12 }}>
+      <NetIncomeOpeningClosingTable year={selectedYear} mode="budget" />
+    </View>
       </ScrollView>
 
       {showYears && <Pressable style={styles.overlay} onPress={() => setShowYears(false)} />}

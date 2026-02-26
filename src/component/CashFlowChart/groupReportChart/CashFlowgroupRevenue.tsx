@@ -4,7 +4,13 @@ import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal";
 import GroupedBarChart from "../../Charts/GroupBarChart";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// If COST in DB is NEGATIVE and you want POSITIVE expense in chart => -1
+// If COST already POSITIVE => 1
 const FLIP_SIGN = -1;
+
+const C_RE = "West Walk Real Estate";
+const C_ADS = "West Walk Advertisement";
 
 // ✅ add ALL option
 export const ALL_COMPANIES = "ALL";
@@ -22,47 +28,49 @@ const extractRows = (result: any) => {
   return Array.isArray(data) ? data : [];
 };
 
-// ---------- generic monthly sum (company optional) ----------
-function sumByMonth(
+// ---------- RAW SIGN WORLD SUMS (NO FLIP HERE) ----------
+function sumByMonthRaw(
   rows: any[],
   company: string | null,
   year: number,
   predicate: (r: any) => boolean,
-  field: "balanceFirst" | "budgetedAmount",
-  transform?: (x: number) => number
+  field: "balanceFirst" | "budgetedAmount"
 ) {
   const out = Array(12).fill(0);
   const c = company ? norm(company) : null;
 
   for (const r of rows || []) {
-    // ✅ company filter only when company provided
     if (c && norm(r.company) !== c) continue;
-
     if (Number(r.year) !== Number(year)) continue;
     if (!predicate(r)) continue;
 
     const m = Number(r.month);
     if (!m || m < 1 || m > 12) continue;
 
-    const raw = Number(r[field] || 0);
-    out[m - 1] += transform ? transform(raw) : raw;
+    out[m - 1] += Number(r[field] || 0); // raw signed
   }
   return out;
 }
 
-function sumRevenueByMonth(rows: any[], company: string | null, year: number) {
-  return sumByMonth(rows, company, year, isRevenue, "balanceFirst");
-}
+const revenueRaw = (rows: any[], company: string | null, year: number) =>
+  sumByMonthRaw(rows, company, year, isRevenue, "balanceFirst");
 
-// cost used only for special adjustment in your old logic
-function sumCostByMonth(rows: any[], company: string | null, year: number) {
-  // ✅ keep your old behavior: display positive cost by flipping sign
-  return sumByMonth(rows, company, year, isCost, "balanceFirst", (x) => x * FLIP_SIGN);
-}
+const costRaw = (rows: any[], company: string | null, year: number) =>
+  sumByMonthRaw(rows, company, year, isCost, "balanceFirst"); // usually negative
 
-function budgetRevenueByMonth(rows: any[], company: string | null, year: number) {
-  return sumByMonth(rows, company, year, isRevenue, "budgetedAmount");
-}
+const budgetRevenueRaw = (rows: any[], company: string | null, year: number) =>
+  sumByMonthRaw(rows, company, year, isRevenue, "budgetedAmount");
+
+const netRaw = (
+  rows: any[],
+  company: string | null,
+  year: number,
+  field: "balanceFirst" | "budgetedAmount"
+) => {
+  const rev = sumByMonthRaw(rows, company, year, isRevenue, field);
+  const cst = sumByMonthRaw(rows, company, year, isCost, field);
+  return rev.map((v, i) => Number(v || 0) + Number(cst[i] || 0)); // ✅ TrialBalance rule
+};
 
 function niceMaxValue(max: number, expandChart: boolean) {
   if (!Number.isFinite(max) || max <= 0) return 1;
@@ -114,45 +122,47 @@ export default function CashFlowGroupRevenueChart({
     };
 
     loadData();
-    return () => (mounted = false);
+    return () => {
+      mounted = false;
+    };
   }, [year]);
 
-  // ✅ chart data with ALL-companies support
   const chartData = useMemo(() => {
     const allMode = norm(company) === norm(ALL_COMPANIES);
-    const companyFilter: string | null = allMode ? null : String(company || "").trim();
+    const companyFilter: string | null = allMode ? null : company;
 
-    const mainRev = sumRevenueByMonth(rows, companyFilter, year);
-    const mainBudget = budgetRevenueByMonth(rows, companyFilter, year);
+    // ✅ Actual revenue RAW
+    let actualRevRaw = revenueRaw(rows, companyFilter, year);
 
-    // ✅ keep your old special rule ONLY when single-company RE
-    // (ALL mode mein already sab include ho chuka hota hai, so no extra add)
-    if (!allMode && norm(companyFilter) === norm("West Walk Real Estate")) {
-      const adRev = sumRevenueByMonth(rows, "West Walk Advertisement", year);
-      const adCost = sumCostByMonth(rows, "West Walk Advertisement", year);
+    // ✅ Budget revenue RAW
+    let budgetRevRawArr = budgetRevenueRaw(rows, companyFilter, year);
 
-      // your old formula kept: netProfit = rev - (positive cost)
-      const adNetProfit = adRev.map(
-        (v, i) => Number(v || 0) - Number(adCost[i] || 0)
+    // ✅ RE adjustment ONLY when single-company RE
+    const isRE = !allMode && norm(company) === norm(C_RE);
+
+    // ✅ Add Advertisement NET into RE Revenue (TrialBalance-consistent)
+    if (isRE) {
+      const adNetA = netRaw(rows, C_ADS, year, "balanceFirst");
+      actualRevRaw = actualRevRaw.map(
+        (v, i) => Number(v || 0) + Number(adNetA[i] || 0)
       );
 
-      for (let i = 0; i < 12; i++) {
-        mainRev[i] = Number(mainRev[i] || 0) + Number(adNetProfit[i] || 0);
-      }
+      const adNetB = netRaw(rows, C_ADS, year, "budgetedAmount");
+      budgetRevRawArr = budgetRevRawArr.map(
+        (v, i) => Number(v || 0) + Number(adNetB[i] || 0)
+      );
     }
 
+    // ✅ Revenue display stays as-is (NO FLIP)
+    const actualDisp = actualRevRaw.map((v) => Number(v || 0));
+    const budgetDisp = budgetRevRawArr.map((v) => Number(v || 0));
+
+    // ✅ SAME rule as Expense: if there is ANY actual entry (raw != 0), budget = 0
     return MONTHS.map((label, i) => {
-      const actual = Number(mainRev[i] || 0);
-
-      // ✅ safer budget-zero rule: if ANY actual entry exists (not just > 0)
-      const hasActual = Math.abs(actual) > 0.000001;
-      const budget = hasActual ? 0 : Number(mainBudget[i] || 0);
-
-      return {
-        label,
-        actualMain: actual,
-        budgetMain: budget,
-      };
+      const actual = Number(actualDisp[i] || 0);
+      const hasActual = Math.abs(Number(actualRevRaw[i] || 0)) > 0.000001; // raw check
+      const budget = hasActual ? 0 : Number(budgetDisp[i] || 0);
+      return { label, actualMain: actual, budgetMain: budget };
     });
   }, [rows, company, year]);
 
@@ -173,7 +183,14 @@ export default function CashFlowGroupRevenueChart({
     : 440;
 
   const usedBarWidth = expandChart ? (isSidebarCollapsed ? 14 : 12) : 8;
-  const usedBarGap = expandChart ? (isSidebarCollapsed ? 14 : 12) : isSidebarCollapsed ? 8 : 6;
+  const usedBarGap = expandChart
+    ? isSidebarCollapsed
+      ? 14
+      : 12
+    : isSidebarCollapsed
+    ? 8
+    : 6;
+
   const usedGroupGap = expandChart
     ? isSidebarCollapsed
       ? 43

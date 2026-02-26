@@ -80,18 +80,13 @@ export default function CashFlowGroupPnLSummaryCards({ company, year }: Props) {
       return (allRows || []).filter((r: any) => norm(r.company) === n);
     };
 
-    // ✅ when ALL => take all rows, else only selected company rows
-    const baseRows = allMode ? (allRows || []) : byCompany(company);
-
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1; // 1..12
 
-    // ✅ as-of month rule: use completed months only
+    // ✅ as-of month rule: use completed months only (current month actual NOT included)
     const asOfMonth = Math.max(0, currentMonth - 1);
 
-    // Split: for past years => 100% actual
-    // for current year => actual months (<= asOfMonth) + budget months (> asOfMonth)
     const splitRows = (rows: any[]) => {
       if (Number(year) < currentYear) return { actual: rows, budget: [] as any[] };
       if (Number(year) > currentYear) return { actual: [] as any[], budget: rows };
@@ -100,6 +95,25 @@ export default function CashFlowGroupPnLSummaryCards({ company, year }: Props) {
       const budget = rows.filter((r) => getMonth(r) > asOfMonth && getMonth(r) <= 12);
       return { actual, budget };
     };
+
+    const blendedNet = (rows: any[]) => {
+      const split = splitRows(rows);
+      return sumNet(split.actual, "balanceFirst") + sumNet(split.budget, "budgetedAmount");
+    };
+
+    // ✅ Make ALL mode match Details screen "All Companies":
+    // - ADV + ASSETS are shown as ZERO there => exclude them from base
+    // - then transfer their NET into RE totals:
+    //   ADV net -> Revenue (Marketing Rights)
+    //   ASSETS net -> Cost (FM COST)
+    let baseRows: any[] = [];
+    if (allMode) {
+      baseRows = (allRows || []).filter(
+        (r: any) => ![norm(C_ADV), norm(C_ASSETS)].includes(norm(r.company))
+      );
+    } else {
+      baseRows = byCompany(company);
+    }
 
     const splitBase = splitRows(baseRows);
 
@@ -112,37 +126,28 @@ export default function CashFlowGroupPnLSummaryCards({ company, year }: Props) {
       sumCost(splitBase.actual, "balanceFirst") +
       sumCost(splitBase.budget, "budgetedAmount");
 
-    // ✅ IMPORTANT:
-    // Your special RE/ADV/ASSETS shifting rules are for single-company views.
-    // For ALL companies combined, DON'T apply those shifts (otherwise double counting/ distortion).
-    // So only apply rules when NOT ALL.
+    // ✅ Apply same transfer as Details screen:
+    // for ALL mode OR RE view
+    if (allMode || norm(company) === norm(C_RE)) {
+      const advNet = blendedNet(byCompany(C_ADV));
+      const assetsNet = blendedNet(byCompany(C_ASSETS));
+
+      rev = rev + advNet;
+      cost = cost + assetsNet;
+    }
+
+    // ✅ Single-company net-zero rules (same as your original)
     if (!allMode) {
-      const compName = String(company || "").trim();
-      const compLower = compName.toLowerCase();
+      const compLower = norm(company);
 
-      const splitAdv = splitRows(byCompany(C_ADV));
-      const splitAssets = splitRows(byCompany(C_ASSETS));
-
-      const blendedNet = (split: { actual: any[]; budget: any[] }) =>
-        sumNet(split.actual, "balanceFirst") + sumNet(split.budget, "budgetedAmount");
-
-      // 1) Real Estate: move adv net to revenue, assets net to cost
-      if (compName === C_RE) {
-        const advNet = blendedNet(splitAdv);
-        const assetsNet = blendedNet(splitAssets);
-
-        rev = rev + advNet;
-        cost = cost + assetsNet;
-      }
-
-      // 2) Assets net = 0
-      if (compLower === C_ASSETS.toLowerCase()) {
+      // Assets net = 0
+      if (compLower === norm(C_ASSETS)) {
         const net = rev + cost;
         rev = rev - net;
       }
 
-      // 3) Advertisement net = 0
-      if (compLower === C_ADV.toLowerCase()) {
+      // Advertisement net = 0
+      if (compLower === norm(C_ADV)) {
         const net = rev + cost;
         cost = cost - net;
       }
