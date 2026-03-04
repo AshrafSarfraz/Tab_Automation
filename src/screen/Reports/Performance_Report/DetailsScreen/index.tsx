@@ -585,63 +585,119 @@ export default function TrialBalanceTableScreen() {
         const buildGrouped = (t: "Revenue" | "Cost") => {
           const rowsCurr = curr.filter((r) => r.type === t);
           const rowsPrev = prev.filter((r) => r.type === t);
-
+        
+          // ✅ keys only from CURRENT year (this prevents extra rows)
           const keys = new Set<string>();
-
+        
           const makeKey = (r: TrialBalanceRow) => {
             const acc = String(r.accountno || "").trim();
-            const code = t === "Revenue" ? String(r.cc3code || "").trim() : String(r.auxcode || "").trim();
-
-            const cc2Part = t === "Revenue" && compParam === C_RE ? String(r.cc2 || "").trim() : "";
-            return `${acc}||${code}||${cc2Part}`;
+            const comp = String(r.component || "").trim();
+          
+            if (t === "Revenue") {
+              const code = String(r.cc3code || "").trim();
+              // ✅ cc2 ko key se hata diya (exact matching ke liye)
+              return `${acc}||${code}`;
+            }
+          
+            // Cost
+            const aux = String(r.auxcode || "").trim();
+          
+            // ✅ empty-aux ko component-wise merge karo (old behaviour)
+            if (!aux) return `MERGED_EMPTYAUX::${comp}`;
+          
+            return `${acc}||${aux}`;
           };
-
-          rowsCurr.forEach((r) => keys.add(makeKey(r)));
-          rowsPrev.forEach((r) => keys.add(makeKey(r)));
+        
+          rowsCurr.forEach((r) => keys.add(makeKey(r))); // ✅ ONLY curr
+          rowsPrev.forEach((r) => keys.add(makeKey(r))); // ✅ add this
 
           const currByKey: Record<string, TrialBalanceRow[]> = {};
           const prevByKey: Record<string, TrialBalanceRow[]> = {};
-
+        
           rowsCurr.forEach((r) => {
             const k = makeKey(r);
             (currByKey[k] ||= []).push(r);
           });
-
+        
           rowsPrev.forEach((r) => {
             const k = makeKey(r);
             (prevByKey[k] ||= []).push(r);
           });
-
+        
           const unified: RowItem[] = [];
-
+        
+          // keys.forEach((k) => {
+          //   const currRows = currByKey[k] || [];
+          //   const prevRows = prevByKey[k] || [];
+        
+          //   // ✅ base ALWAYS from CURRENT row (so component/code stays correct)
+          //   const base = (currRows[0]) as TrialBalanceRow;
+        
+          //   const balancesA = Array(12).fill(0);
+          //   const budgetB = Array(12).fill(0);
+          //   const prevP = Array(12).fill(0);
+        
+          //   currRows.forEach((r) => { 
+          //     if (!isValidMonth(r.month)) return;
+          //     const idx = Number(r.month) - 1;
+          //     balancesA[idx] += Number(r.balanceFirst || 0);
+          //     budgetB[idx] += Number(r.budgetedAmount || 0);
+          //   });
+        
+          //   // ✅ prev ONLY fills values for the SAME key (no new rows)
+          //   prevRows.forEach((r) => {
+          //     if (!isValidMonth(r.month)) return;
+          //     const idx = Number(r.month) - 1;
+          //     prevP[idx] += Number(r.balanceFirst || 0);
+          //   });
+        
+          //   unified.push({
+          //     ...base,
+          //     type: t,
+          //     company: compParam,
+          //     year: yearParam,
+          //     totalBalances: balancesA,
+          //     totalSum: sumArr(balancesA),
+          //     budgetMonthly: budgetB,
+          //     budgetSum: sumArr(budgetB),
+          //     prevMonthlyBalances: prevP,
+          //     prevYearSum: sumArr(prevP),
+          //   } as RowItem);
+          // });
+        
+          // ✅ rest (group by component label) bilkul same rehne do
           keys.forEach((k) => {
             const currRows = currByKey[k] || [];
             const prevRows = prevByKey[k] || [];
-
+          
+            // ✅ base from CURRENT if present, otherwise from PREVIOUS
             const base = (currRows[0] || prevRows[0]) as TrialBalanceRow;
-
+          
+            const isPrevOnly = currRows.length === 0 && prevRows.length > 0;
+          
             const balancesA = Array(12).fill(0);
-            const budgetB = Array(12).fill(0);
-            const prevP = Array(12).fill(0);
-
+            const budgetB  = Array(12).fill(0);
+            const prevP    = Array(12).fill(0);
+          
             currRows.forEach((r) => {
               if (!isValidMonth(r.month)) return;
               const idx = Number(r.month) - 1;
               balancesA[idx] += Number(r.balanceFirst || 0);
-              budgetB[idx] += Number(r.budgetedAmount || 0);
+              budgetB[idx]   += Number(r.budgetedAmount || 0);
             });
-
+          
             prevRows.forEach((r) => {
               if (!isValidMonth(r.month)) return;
               const idx = Number(r.month) - 1;
               prevP[idx] += Number(r.balanceFirst || 0);
             });
-
+          
             unified.push({
               ...base,
+              isPrevOnly,              // ✅ mark it
               type: t,
               company: compParam,
-              year: yearParam,
+              year: yearParam,         // ✅ keep screen year (2025)
               totalBalances: balancesA,
               totalSum: sumArr(balancesA),
               budgetMonthly: budgetB,
@@ -650,11 +706,9 @@ export default function TrialBalanceTableScreen() {
               prevYearSum: sumArr(prevP),
             } as RowItem);
           });
-
-          // group by company-component label (collapse/expand)
           const byComponent: Record<string, RowItem[]> = {};
           const groupLabelByKey: Record<string, string> = {};
-
+        
           unified.forEach((r) => {
             const rawComp = String(r.component || "").trim();
             const groupLabel = getGroupLabelForCompanyComponent(compParam, rawComp);
@@ -662,30 +716,30 @@ export default function TrialBalanceTableScreen() {
             (byComponent[gk] ||= []).push(r);
             groupLabelByKey[gk] = groupLabel;
           });
-
+        
           const collapsed: RowItem[] = [];
-
+        
           Object.entries(byComponent).forEach(([groupKey, arr]) => {
             const rawFirst = String(arr[0].component || "").trim();
             const isMapped = isMappedCompanyComponent(compParam, rawFirst);
-
+        
             if (arr.length <= 1 && !isMapped) {
               collapsed.push(arr[0]);
               return;
             }
-
+        
             const sumA = Array(12).fill(0);
             const sumB = Array(12).fill(0);
             const sumP = Array(12).fill(0);
-
+        
             arr.forEach((ch) => {
               ch.totalBalances?.forEach((v, i) => (sumA[i] += v));
               ch.budgetMonthly?.forEach((v, i) => (sumB[i] += v));
               ch.prevMonthlyBalances?.forEach((v, i) => (sumP[i] += v));
             });
-
+        
             const groupLabel = groupLabelByKey[groupKey] || rawFirst;
-
+        
             collapsed.push({
               isGroupParent: true,
               groupKey,
@@ -702,7 +756,7 @@ export default function TrialBalanceTableScreen() {
               children: arr,
             } as RowItem);
           });
-
+        
           return collapsed;
         };
 
@@ -1329,6 +1383,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFEFEF",
   },
 });
+
+
+
+
+
 
 
 
