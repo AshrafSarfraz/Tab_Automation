@@ -89,7 +89,7 @@ const MainDashboard = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-    <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
+    <StatusBar hidden={true} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
 
       <View style={styles.Container}>
         {/* ================= LEFT SIDEBAR (FIXED) ================= */}
@@ -108,7 +108,7 @@ const MainDashboard = ({ navigation }: any) => {
             </View>
 
             <View style={styles.sidebarContent}>
-              {!collapsed && <Text style={styles.sidebarTitle}>Companies</Text>}
+              {!collapsed && <Text style={styles.sidebarTitle}>Trail Balance</Text>}
 
               {companies.map((c) => {
   const isSelected = selectedCompany === c.id;
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  label: { fontWeight: "700" },
+  label: { fontWeight: "700",color:'#000', },
 
   yearBox: {
     flexDirection: "row",

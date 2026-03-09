@@ -13,6 +13,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import _ from 'lodash';
 import { Colors } from '../../../themes/color';
 import CustomHeader from '../../../component/customHeader';
+import Container from '../../../ui/useLayout';
 
 const { width } = Dimensions.get('window');
 
@@ -39,8 +40,7 @@ export default function CompanyLpo() {
   }, [lpoList]);
 
   return (
-    <View style={styles.container}>
-      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
+    <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
       <View style={styles.header}>
         <CustomHeader title="Companies" />
       </View>
@@ -91,16 +91,12 @@ export default function CompanyLpo() {
           </View>
         )}
       />
-    </View>
+    </Container>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.Bg,
-    justifyContent:"center"
-  },
+
 
   header: {
     borderBottomWidth: 0.4,

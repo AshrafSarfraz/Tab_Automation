@@ -3,6 +3,7 @@ import { View, StyleSheet, Dimensions, StatusBar } from 'react-native';
 import { WebView } from 'react-native-webview';
 import CustomHeader from '../../../component/customHeader';
 import { Colors } from '../../../themes/color';
+import Container from '../../../ui/useLayout';
 const { width } = Dimensions.get('window');
 
 
@@ -10,8 +11,7 @@ export default function WebViewScreen({ route }) {
   const { url } = route.params;
 
   return (
-    <View style={styles.container}>
-      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
+    <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
      <View style={styles.header}>
         <CustomHeader title="Back" />
       </View>
@@ -21,15 +21,12 @@ export default function WebViewScreen({ route }) {
         originWhitelist={['*']}
         startInLoadingState={true}
       />
-    </View>
+    </Container>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1,
-    backgroundColor:Colors.White
-  },
+
   header: {
     borderBottomWidth: 0.4,
   },

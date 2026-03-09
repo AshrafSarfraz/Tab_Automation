@@ -12,6 +12,7 @@ import {
 import { useRoute } from '@react-navigation/native';
 import { Colors } from '../../../themes/color';
 import CustomHeader from '../../../component/customHeader';
+import Container from '../../../ui/useLayout';
 
 const { width } = Dimensions.get('window');
 
@@ -99,8 +100,7 @@ export default function LpoListScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+     <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
       <View style={styles.header}>
         <CustomHeader title="LPO List" />
       </View>
@@ -113,15 +113,12 @@ export default function LpoListScreen({ navigation }: any) {
         ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         renderItem={renderItem}
       />
-    </View>
+    </Container>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.Bg,
-  },
+
 
   header: {
     borderBottomWidth: 0.4,

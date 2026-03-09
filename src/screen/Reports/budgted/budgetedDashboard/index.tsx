@@ -84,7 +84,7 @@ const BudgtedDashboard = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-    <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
+    <StatusBar hidden={true} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
 
       <View style={styles.Container}>
         {/* ================= LEFT SIDEBAR (FIXED) ================= */}
@@ -103,7 +103,7 @@ const BudgtedDashboard = ({ navigation }: any) => {
             </View>
 
             <View style={styles.sidebarContent}>
-              {!collapsed && <Text style={styles.sidebarTitle}>Companies</Text>}
+              {!collapsed && <Text style={styles.sidebarTitle}>Budget Balance</Text>}
 
               {companies.map((c) => {
   const isSelected = selectedCompany === c.id;

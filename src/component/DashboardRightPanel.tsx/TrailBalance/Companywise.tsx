@@ -48,7 +48,7 @@ export default function CompanyWisedRightPanel({
 }: Props) {
   return (
     <View style={styles.RightSide}>
-      {/* Top Bar */}
+   
       <View style={styles.topBar}>
         <View style={styles.yearWrap}>
           <Text style={styles.label}>Year:</Text>

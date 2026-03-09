@@ -1,5 +1,3 @@
-
-
 import React from "react";
 import { StyleSheet, View, TouchableOpacity, Linking, Alert, ImageBackground } from "react-native";
 import ButtonCard from "../../../component/cardBtn/buttonCard";
@@ -8,8 +6,6 @@ import Container from "../../../ui/useLayout";
 import { Colors } from "../../../themes/color";
 import { useNavigation } from "@react-navigation/native";
 import CustomHeader from "../../../component/customHeader";
-
-
 
 
 
@@ -39,7 +35,7 @@ const ReportSelection = () => {
         
          <View style={styles.Btn_Container} > 
        
-         <View style={{left:-35,marginBottom:10}} >
+         <View style={{left:-80}} >
          <ButtonCard
           no=""
           title="Performance Report (PR)"
@@ -52,7 +48,7 @@ const ReportSelection = () => {
        
        
        
-        <View  >
+        <View style={{left:-20}} >
          <ButtonCard
           no=""
           title="Cashflow Report"
@@ -65,10 +61,10 @@ const ReportSelection = () => {
       
    
        
-        <View style={{left:-35,marginTop:10}} >
+        <View style={{left:-17}} >
          <ButtonCard
           no=""
-          title="Budgted Amount "
+          title="Budget Report"
           subtitle="Active"
           caption="Payment requests for approved invoices, services, or project-related expenses."
           icon={Budget}
@@ -77,7 +73,17 @@ const ReportSelection = () => {
        
         </View>
        
-
+        <View style={{left:-80,}} >
+         <ButtonCard
+          no=""
+          title="CapeX Report"
+          subtitle="Active"
+          caption="Payment requests for approved invoices, services, or project-related expenses."
+          icon={Budget}
+          Color="#038645"
+          onPress={() => navigation.navigate('CapexDashboard')}/> 
+       
+        </View>
           </View>
           </View>
 
@@ -92,7 +98,7 @@ const styles=StyleSheet.create({
   Container:{
     width:"100%",
     flexDirection: "row",
-    height:"85%",
+    height:"80%",
     alignItems:"center",
     paddingLeft:30
   },
@@ -123,7 +129,8 @@ const styles=StyleSheet.create({
   },
   Btn_Container:{
    width:"50%",
-   left:-85
+   left:-85,
+
   },
   bTN: {
     width: 300,

@@ -15,6 +15,8 @@ import {
   ScrollView,
 } from "react-native";
 import CustomHeader from "../../../../component/customHeader";
+import Container from "../../../../ui/useLayout";
+import { Colors } from "../../../../themes/color";
 
 
 const API_BASE = "https://financesystemawh-rtjt.onrender.com"
@@ -247,6 +249,7 @@ export default function AddProjects() {
   };
 
   return (
+    <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
     <View style={styles.container}>
       <Header />
 
@@ -421,6 +424,7 @@ export default function AddProjects() {
         </KeyboardAvoidingView>
       </Modal>
     </View>
+    </Container>
   );
 }
 
@@ -434,7 +438,7 @@ function Field({ label, children }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop:20, paddingHorizontal: 20, backgroundColor: "#fff" },
+  container: { paddingHorizontal: 20, },
 
   header: {
     flexDirection: "row",

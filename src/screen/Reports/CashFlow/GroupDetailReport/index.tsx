@@ -19,6 +19,7 @@ import CustomHeader from "../../../../component/customHeader";
 import CustomButton from "../../../../component/customButton";
 import { exportTrialBalanceToXLSX } from "../../../../database/Utils/export_to_excel";
 import NetIncomeOpeningClosingTable from "../../../../component/Open-CloseBalance";
+import Container from "../../../../ui/useLayout";
 
 // ======================= CONFIG =======================
 const { width } = Dimensions.get("window");
@@ -938,8 +939,8 @@ export default function CashFlowReportDetails1() {
   }
 
   return (
-    <View style={styles.Container}>
-      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
+    <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
+ 
 
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingRight: 20, borderBottomWidth: 1 }}>
         <CustomHeader title={`CashFlow - ${yearParam}`} />
@@ -995,13 +996,12 @@ export default function CashFlowReportDetails1() {
       {/* <View style={{ padding: 12 }}>
          <NetIncomeOpeningClosingTable year={year} mode="budget" />
        </View> */}
-    </View>
+    </Container>
   );
 }
 
 // =================== STYLES ===================
 const styles = StyleSheet.create({
-  Container: { flex: 1, backgroundColor: Colors.White },
   headerRow: {
     paddingHorizontal: 10,
     flexDirection: "row",

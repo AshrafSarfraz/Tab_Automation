@@ -15,6 +15,7 @@ import {
 import { getWestwalkMongoFromSQLite } from "../../../../database/westwalkTrailBal"; // ✅ ONLY ONE API
 import { Colors } from "../../../../themes/color";
 import CustomHeader from "../../../../component/customHeader";
+import Container from "../../../../ui/useLayout";
 
 const { width } = Dimensions.get("window");
 
@@ -503,8 +504,7 @@ export default function AllCompaniesPnLTableScreen({ route }: any) {
   }
 
   return (
-    <View style={styles.Container}>
-      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
+    <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingRight: 20, borderBottomWidth: 1 }}>
         <CustomHeader title={`All Companies - ${yearParam}`} />
       </View>
@@ -539,12 +539,12 @@ export default function AllCompaniesPnLTableScreen({ route }: any) {
           />
         </ScrollView>
       </View>
-    </View>
+    </Container>
   );
 }
 
 const styles = StyleSheet.create({
-  Container: { flex: 1, backgroundColor: Colors.White },
+
   headerRow: {
     paddingHorizontal: 10,
     flexDirection: "row",

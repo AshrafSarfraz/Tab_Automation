@@ -25,7 +25,7 @@ const companies = [
   { id: 5, name: "Assets Services Company", logo: Assets },
   { id: 6, name: "Uranus General Contracting Company WLL", logo: Uranisu },
   { id: 7, name: "West Walk Hotel Management", logo: Retaj },
-  { id: 8, name: "others" },
+  // { id: 8, name: "others" },
 ];
 
 const YEARS = [2023, 2024, 2025, 2026];
@@ -35,7 +35,7 @@ const CashFlowDashboard = ({ navigation }: any) => {
   const MAX_WIDTH = 220;
 
   const defaultCompany =
-    companies.find((c) => c.name === "West Walk Real Estate") || companies[0];
+    companies.find((c) => c.name === "Group Report") || companies[0];
 
   const [collapsed, setCollapsed] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(defaultCompany.id);
@@ -82,7 +82,7 @@ const CashFlowDashboard = ({ navigation }: any) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar
-        hidden={false}
+        hidden={true}
         backgroundColor={Colors.PrimaryColor}
         barStyle="light-content"
       />
@@ -102,7 +102,7 @@ const CashFlowDashboard = ({ navigation }: any) => {
             </View>
 
             <View style={styles.sidebarContent}>
-              {!collapsed && <Text style={styles.sidebarTitle}>Companies</Text>}
+              {!collapsed && <Text style={styles.sidebarTitle}>Cash Flow </Text>}
 
               {companies.map((c) => {
                 const isSelected = selectedCompany === c.id;
