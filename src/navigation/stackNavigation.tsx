@@ -30,6 +30,8 @@ import AddProjects from '../screen/Reports/CashFlow/AddProjects';
 import CashFlowReportDetails1 from '../screen/Reports/CashFlow/GroupDetailReport';
 import CapexDashboard from '../screen/Reports/CapeX/DashBoard';
 import CapexBalanceScreen from '../screen/Reports/CapeX/AddCapex';
+import TOR_Dashboard from '../screen/Reports/TOR/dashboard';
+import AddTOR from '../screen/Reports/TOR/uploadData';
 
 const Stack = createNativeStackNavigator();
 
@@ -87,6 +89,11 @@ const StackNavigation = () => {
 
         <Stack.Screen name="CapexDashboard" component={CapexDashboard} />
         <Stack.Screen name="CapexBalanceScreen" component={CapexBalanceScreen} />
+
+        <Stack.Screen name="TOR_Dashboard" component={TOR_Dashboard} />
+        <Stack.Screen name="AddTOR" component={AddTOR} />
+
+
 
       </Stack.Navigator>
     </NavigationContainer>

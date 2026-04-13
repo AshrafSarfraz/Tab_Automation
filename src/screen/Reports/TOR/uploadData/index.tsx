@@ -19,62 +19,67 @@ import {
 import CustomHeader from "../../../../component/customHeader";
 import { Colors } from "../../../../themes/color";
 
-const API_BASE = "https://financesystemawh-rtjt.onrender.com";
-const ENDPOINT = `${API_BASE}/CapexBalance`;
+const API_URL = "https://financesystemawh-rtjt.onrender.com/api/tenant";
+
+const MONTHS = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
 
 const emptyForm = {
-  Project: "",
-  accountType: "Cost",
-  component: "",
+  tenantName: "",
+  percentage: "",
+  baseRent: "",
+  totalRevenue: "",
+  month: "",
   year: String(new Date().getFullYear()),
-  Amount: "",
-  FinanceCost: "",
-  NetProfit: "",
 };
 
-export default function CapexBalanceScreen() {
-  const [rows, setRows]                           = useState([]);
-  const [loading, setLoading]                     = useState(false);
-  const [modalVisible, setModalVisible]           = useState(false);
-  const [saving, setSaving]                       = useState(false);
-  const [editingId, setEditingId]                 = useState(null);
-  const [form, setForm]                           = useState(emptyForm);
-  const [filterProject, setFilterProject]         = useState('');
-  const [filterYear, setFilterYear]               = useState('');
-  const [projectSuggestions, setProjectSuggestions] = useState([]);
-  const [showProjectSuggestions, setShowProjectSuggestions] = useState(false);
-  const [showAccountTypeDropdown, setShowAccountTypeDropdown] = useState(false);
+export default function AddTOR({ navigation }) {
+  const [rows, setRows]                       = useState([]);
+  const [loading, setLoading]                 = useState(false);
+  const [modalVisible, setModalVisible]       = useState(false);
+  const [saving, setSaving]                   = useState(false);
+  const [editingId, setEditingId]             = useState(null);
+  const [form, setForm]                       = useState(emptyForm);
+  const [showMonthDrop, setShowMonthDrop]     = useState(false);
+  const [filterYear, setFilterYear]           = useState('');
+  const [filterTenant, setFilterTenant]       = useState('');
+  const [tenantSuggestions, setTenantSuggestions] = useState([]);
 
   const isEditing = Boolean(editingId);
 
-  // ── Existing projects for suggestions ──────────────────────
-  const existingProjects = useMemo(() =>
-    [...new Set(rows.map(r => r.Project).filter(Boolean))],
-  [rows]);
+  // ── Existing tenant names for suggestions ──────────────────
+  const existingTenants = useMemo(() => {
+    return [...new Set(rows.map(r => r.tenantName).filter(Boolean))];
+  }, [rows]);
+
+  // ── Auto-calculate TOR ─────────────────────────────────────
+  const calculatedTOR = useMemo(() => {
+    const rev  = parseFloat(form.totalRevenue) || 0;
+    const pct  = parseFloat(form.percentage)   || 0;
+    const base = parseFloat(form.baseRent)     || 0;
+    return (rev * pct) / 100 - base;
+  }, [form.totalRevenue, form.percentage, form.baseRent]);
 
   // ── Filter rows ────────────────────────────────────────────
-  const filteredRows = useMemo(() =>
-    rows.filter(item => {
-      const matchProject = filterProject
-        ? item.Project?.toLowerCase().includes(filterProject.toLowerCase())
-        : true;
-      const matchYear = filterYear
-        ? String(item.year).includes(filterYear)
-        : true;
-      return matchProject && matchYear;
-    }),
-  [rows, filterProject, filterYear]);
+  const filteredRows = useMemo(() => {
+    return rows.filter(item => {
+      const matchYear   = filterYear   ? String(item.year).includes(filterYear)                              : true;
+      const matchTenant = filterTenant ? item.tenantName?.toLowerCase().includes(filterTenant.toLowerCase()) : true;
+      return matchYear && matchTenant;
+    });
+  }, [rows, filterYear, filterTenant]);
 
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
     try {
       setLoading(true);
-      const res  = await fetch(ENDPOINT);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to load data");
-      const sorted = [...(data || [])].sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0));
-      setRows(sorted);
+      const res  = await fetch(API_URL);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Failed to load");
+      setRows(json.data || []);
     } catch (e) {
       Alert.alert("Error", e.message);
     } finally {
@@ -85,24 +90,21 @@ export default function CapexBalanceScreen() {
   function openAddModal() {
     setEditingId(null);
     setForm({ ...emptyForm, year: String(new Date().getFullYear()) });
-    setShowProjectSuggestions(false);
-    setShowAccountTypeDropdown(false);
+    setTenantSuggestions([]);
     setModalVisible(true);
   }
 
   function openEditModal(item) {
     setEditingId(item._id);
     setForm({
-      Project:     String(item.Project     ?? ""),
-      accountType: String(item.accountType ?? "Cost"),
-      component:   String(item.component   ?? ""),
-      year:        String(item.year        ?? ""),
-      Amount:      String(item.Amount      ?? ""),
-      FinanceCost: String(item.FinanceCost ?? ""),
-      NetProfit:   String(item.NetProfit   ?? ""),
+      tenantName:   String(item.tenantName   ?? ""),
+      percentage:   String(item.percentage   ?? ""),
+      baseRent:     String(item.baseRent     ?? ""),
+      totalRevenue: String(item.totalRevenue ?? ""),
+      month:        String(item.month        ?? ""),
+      year:         String(item.year         ?? ""),
     });
-    setShowProjectSuggestions(false);
-    setShowAccountTypeDropdown(false);
+    setTenantSuggestions([]);
     setModalVisible(true);
   }
 
@@ -110,48 +112,54 @@ export default function CapexBalanceScreen() {
     setForm(p => ({ ...p, [key]: value }));
   }
 
-  function onProjectChange(v) {
-    setField("Project", v);
+  // ── Tenant name change with suggestions ────────────────────
+  function onTenantChange(v) {
+    setField("tenantName", v);
     if (v.trim().length > 0) {
-      setShowProjectSuggestions(true);
+      const filtered = existingTenants.filter(t =>
+        t.toLowerCase().includes(v.toLowerCase())
+      );
+      setTenantSuggestions(filtered);
     } else {
-      setShowProjectSuggestions(false);
+      setTenantSuggestions([]);
     }
   }
 
-  function validateForm() {
-    const year = Number(form.year);
-    if (!form.Project?.trim())                          return "Project is required";
-    if (!Number.isFinite(year) || year < 2000 || year > 2100) return "Year looks invalid";
-    if (!["Cost", "NetProfit"].includes(form.accountType)) return 'accountType must be "Cost" or "NetProfit"';
+  function validate() {
+    if (!form.tenantName.trim()) return "Tenant Name is required";
+    if (!form.month)             return "Please select a Month";
+    if (!form.year)              return "Year is required";
+    if (!form.percentage)        return "Percentage is required";
+    if (!form.baseRent)          return "Base Rent is required";
+    if (!form.totalRevenue)      return "Total Revenue is required";
     return null;
   }
 
   async function save() {
-    const err = validateForm();
+    const err = validate();
     if (err) return Alert.alert("Validation", err);
 
     const payload = {
-      Project:     form.Project.trim(),
-      accountType: form.accountType,
-      component:   form.component.trim(),
-      year:        Number(form.year),
-      Amount:      Number(form.Amount      || 0),
-      FinanceCost: Number(form.FinanceCost || 0),
-      NetProfit:   Number(form.NetProfit   || 0),
+      tenantName:   form.tenantName.trim(),
+      percentage:   parseFloat(form.percentage),
+      baseRent:     parseFloat(form.baseRent),
+      totalRevenue: parseFloat(form.totalRevenue),
+      tor:          calculatedTOR,
+      month:        form.month,
+      year:         parseInt(form.year),
     };
 
     try {
       setSaving(true);
-      const url    = isEditing ? `${ENDPOINT}/${editingId}` : ENDPOINT;
+      const url    = isEditing ? `${API_URL}/${editingId}` : API_URL;
       const method = isEditing ? "PUT" : "POST";
       const res    = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Save failed");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Save failed");
       setModalVisible(false);
       await loadAll();
     } catch (e) {
@@ -168,9 +176,9 @@ export default function CapexBalanceScreen() {
         text: "Delete", style: "destructive",
         onPress: async () => {
           try {
-            const res  = await fetch(`${ENDPOINT}/${id}`, { method: "DELETE" });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || "Delete failed");
+            const res  = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json?.error || "Delete failed");
             await loadAll();
           } catch (e) {
             Alert.alert("Error", e.message);
@@ -180,27 +188,19 @@ export default function CapexBalanceScreen() {
     ]);
   }
 
-  const filteredSuggestions = existingProjects.filter(p =>
-    p.toLowerCase().includes((form.Project || "").toLowerCase())
-  );
-
   // ── TABLE ROW ───────────────────────────────────────────────
   const RowItem = ({ item, index }) => {
     const isEven = index % 2 === 0;
     return (
       <View style={[styles.tableRow, { backgroundColor: isEven ? "#fff" : "#F8F9FA" }]}>
-        <Text style={[styles.cell, styles.colProject]}    numberOfLines={1}>{item.Project || ""}</Text>
-        <Text style={[styles.cell, styles.colType]}       numberOfLines={1}>{item.accountType || ""}</Text>
-        <Text style={[styles.cell, styles.colComponent]}  numberOfLines={1}>{item.component || ""}</Text>
-        <Text style={[styles.cell, styles.colYear]}       numberOfLines={1}>{item.year}</Text>
-        <Text style={[styles.cell, styles.colAmount]}     numberOfLines={1}>
-          {Number(item.Amount || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-        </Text>
-        <Text style={[styles.cell, styles.colFinance]}    numberOfLines={1}>
-          {Number(item.FinanceCost || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-        </Text>
-        <Text style={[styles.cell, styles.colProfit]}     numberOfLines={1}>
-          {Number(item.NetProfit || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+        <Text style={[styles.cell, styles.colName]}  numberOfLines={1}>{item.tenantName}</Text>
+        <Text style={[styles.cell, styles.colMonth]} numberOfLines={1}>{item.month}</Text>
+        <Text style={[styles.cell, styles.colYear]}  numberOfLines={1}>{item.year}</Text>
+        <Text style={[styles.cell, styles.colPct]}   numberOfLines={1}>{item.percentage}%</Text>
+        <Text style={[styles.cell, styles.colBase]}  numberOfLines={1}>{Number(item.baseRent).toLocaleString()}</Text>
+        <Text style={[styles.cell, styles.colRev]}   numberOfLines={1}>{Number(item.totalRevenue).toLocaleString()}</Text>
+        <Text style={[styles.cell, styles.colTor, { color: item.tor >= 0 ? '#16A34A' : '#DC2626' }]} numberOfLines={1}>
+          {Number(item.tor).toLocaleString()}
         </Text>
         <View style={[styles.cell, styles.colActions, { flexDirection: "row", gap: 6 }]}>
           <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
@@ -224,15 +224,13 @@ export default function CapexBalanceScreen() {
         <View style={styles.header}>
           <CustomHeader title="Back" />
           <View style={styles.actionsWrap}>
-
             <TextInput
               style={styles.searchInput}
-              placeholder="Search project..."
+              placeholder="Search tenant..."
               placeholderTextColor="#999"
-              value={filterProject}
-              onChangeText={setFilterProject}
+              value={filterTenant}
+              onChangeText={setFilterTenant}
             />
-
             <TextInput
               style={[styles.searchInput, { width: 80 }]}
               placeholder="Year"
@@ -241,28 +239,24 @@ export default function CapexBalanceScreen() {
               onChangeText={setFilterYear}
               keyboardType="number-pad"
             />
-
             <TouchableOpacity style={styles.addBtn} onPress={openAddModal}>
-              <Text style={styles.addBtnText}>+ Add Capex</Text>
+              <Text style={styles.addBtnText}>+ Add TOR</Text>
             </TouchableOpacity>
-
           </View>
         </View>
 
         {/* TABLE — horizontal scroll */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View>
-
-            {/* TABLE HEADER */}
             <View style={[styles.tableRow, styles.tableHeaderRow]}>
-              <Text style={[styles.cell, styles.colProject,   styles.hCell]}>Project</Text>
-              <Text style={[styles.cell, styles.colType,      styles.hCell]}>Type</Text>
-              <Text style={[styles.cell, styles.colComponent, styles.hCell]}>Component</Text>
-              <Text style={[styles.cell, styles.colYear,      styles.hCell]}>Year</Text>
-              <Text style={[styles.cell, styles.colAmount,    styles.hCell]}>Amount</Text>
-              <Text style={[styles.cell, styles.colFinance,   styles.hCell]}>Finance Cost</Text>
-              <Text style={[styles.cell, styles.colProfit,    styles.hCell]}>Net Profit</Text>
-              <Text style={[styles.cell, styles.colActions,   styles.hCell]}>Actions</Text>
+              <Text style={[styles.cell, styles.colName,    styles.hCell]}>Tenant</Text>
+              <Text style={[styles.cell, styles.colMonth,   styles.hCell]}>Month</Text>
+              <Text style={[styles.cell, styles.colYear,    styles.hCell]}>Year</Text>
+              <Text style={[styles.cell, styles.colPct,     styles.hCell]}>%</Text>
+              <Text style={[styles.cell, styles.colBase,    styles.hCell]}>Base Rent</Text>
+              <Text style={[styles.cell, styles.colRev,     styles.hCell]}>Revenue</Text>
+              <Text style={[styles.cell, styles.colTor,     styles.hCell]}>TOR</Text>
+              <Text style={[styles.cell, styles.colActions, styles.hCell]}>Actions</Text>
             </View>
 
             {loading ? (
@@ -284,7 +278,6 @@ export default function CapexBalanceScreen() {
                 contentContainerStyle={{ paddingBottom: 24 }}
               />
             )}
-
           </View>
         </ScrollView>
 
@@ -298,7 +291,7 @@ export default function CapexBalanceScreen() {
 
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>
-                  {isEditing ? "Edit Capex" : "Add New Capex"}
+                  {isEditing ? "Edit TOR" : "Add New TOR"}
                 </Text>
                 <TouchableOpacity onPress={() => !saving && setModalVisible(false)}>
                   <Text style={styles.closeText}>✕</Text>
@@ -311,28 +304,27 @@ export default function CapexBalanceScreen() {
                 keyboardShouldPersistTaps="handled"
               >
 
-                {/* Project with suggestions */}
-                <Field label="Project *">
+                {/* Tenant Name with suggestions */}
+                <Field label="Tenant Name *">
                   <View style={{ position: 'relative' }}>
                     <TextInput
                       style={styles.input}
-                      value={form.Project}
-                      onChangeText={onProjectChange}
-                      onFocus={() => form.Project.trim() && setShowProjectSuggestions(true)}
-                      placeholder="e.g. West Walk"
+                      value={form.tenantName}
+                      onChangeText={onTenantChange}
+                      placeholder="e.g. Sasso"
                     />
-                    {showProjectSuggestions && filteredSuggestions.length > 0 && (
+                    {tenantSuggestions.length > 0 && (
                       <View style={styles.suggestionBox}>
-                        {filteredSuggestions.slice(0, 6).map((name, i) => (
+                        {tenantSuggestions.map((name, i) => (
                           <TouchableOpacity
                             key={i}
                             style={[
                               styles.suggestionItem,
-                              i === filteredSuggestions.length - 1 && { borderBottomWidth: 0 }
+                              i === tenantSuggestions.length - 1 && { borderBottomWidth: 0 }
                             ]}
                             onPress={() => {
-                              setField("Project", name);
-                              setShowProjectSuggestions(false);
+                              setField("tenantName", name);
+                              setTenantSuggestions([]);
                             }}
                           >
                             <Text style={styles.suggestionText}>{name}</Text>
@@ -343,51 +335,36 @@ export default function CapexBalanceScreen() {
                   </View>
                 </Field>
 
-                {/* Account Type */}
-                <Field label="Account Type *">
-                  <View style={{ position: 'relative' }}>
+                {/* Month + Year */}
+                <View style={styles.formRow}>
+                  <Field label="Month *">
                     <TouchableOpacity
                       style={[styles.input, { justifyContent: "center" }]}
-                      onPress={() => setShowAccountTypeDropdown(!showAccountTypeDropdown)}
+                      onPress={() => setShowMonthDrop(!showMonthDrop)}
                     >
-                      <Text style={{ color: form.accountType ? "#000" : "#aaa", fontSize: 14 }}>
-                        {form.accountType || "Select type"}
+                      <Text style={{ color: form.month ? "#000" : "#aaa", fontSize: 14 }}>
+                        {form.month || "Select month"}
                       </Text>
                     </TouchableOpacity>
-                    {showAccountTypeDropdown && (
-                      <View style={styles.suggestionBox}>
-                        {["Cost", "NetProfit"].map((type, i) => (
-                          <TouchableOpacity
-                            key={type}
-                            style={[styles.suggestionItem, i === 1 && { borderBottomWidth: 0 }]}
-                            onPress={() => {
-                              setField("accountType", type);
-                              setShowAccountTypeDropdown(false);
-                            }}
-                          >
-                            <Text style={[
-                              styles.suggestionText,
-                              form.accountType === type && { color: Colors.PrimaryColor, fontWeight: "700" }
-                            ]}>
-                              {type}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
+                    {showMonthDrop && (
+                      <View style={styles.monthDrop}>
+                        <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                          {MONTHS.map(m => (
+                            <TouchableOpacity
+                              key={m}
+                              style={[styles.monthItem, form.month === m && { backgroundColor: "#EAF4FB" }]}
+                              onPress={() => { setField("month", m); setShowMonthDrop(false); }}
+                            >
+                              <Text style={[{ fontSize: 13 }, form.month === m && { color: Colors.PrimaryColor, fontWeight: "700" }]}>
+                                {m}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
                       </View>
                     )}
-                  </View>
-                </Field>
-
-                {/* Component + Year */}
-                <View style={styles.formRow}>
-                  <Field label="Component">
-                    <TextInput
-                      style={styles.input}
-                      value={form.component}
-                      onChangeText={v => setField("component", v)}
-                      placeholder="e.g. Hardware"
-                    />
                   </Field>
+
                   <Field label="Year *">
                     <TextInput
                       style={styles.input}
@@ -399,38 +376,48 @@ export default function CapexBalanceScreen() {
                   </Field>
                 </View>
 
-                {/* Amount + Finance Cost */}
+                {/* Percentage + Base Rent */}
                 <View style={styles.formRow}>
-                  <Field label="Amount">
+                  <Field label="Percentage (%) *">
                     <TextInput
                       style={styles.input}
-                      value={form.Amount}
-                      onChangeText={v => setField("Amount", v)}
+                      value={form.percentage}
+                      onChangeText={v => setField("percentage", v)}
                       keyboardType="decimal-pad"
-                      placeholder="0"
+                      placeholder="e.g. 17"
                     />
                   </Field>
-                  <Field label="Finance Cost">
+                  <Field label="Base Rent *">
                     <TextInput
                       style={styles.input}
-                      value={form.FinanceCost}
-                      onChangeText={v => setField("FinanceCost", v)}
+                      value={form.baseRent}
+                      onChangeText={v => setField("baseRent", v)}
                       keyboardType="decimal-pad"
-                      placeholder="0"
+                      placeholder="e.g. 97500"
                     />
                   </Field>
                 </View>
 
-                {/* Net Profit */}
-                <Field label="Net Profit">
+                {/* Total Revenue */}
+                <Field label="Total Revenue *">
                   <TextInput
                     style={styles.input}
-                    value={form.NetProfit}
-                    onChangeText={v => setField("NetProfit", v)}
+                    value={form.totalRevenue}
+                    onChangeText={v => setField("totalRevenue", v)}
                     keyboardType="decimal-pad"
-                    placeholder="0"
+                    placeholder="e.g. 1515020"
                   />
                 </Field>
+
+                {/* TOR Preview */}
+                <View style={styles.torPreview}>
+                  <Text style={styles.torLabel}>
+                    TOR = (Revenue × %) / 100 − Base Rent
+                  </Text>
+                  <Text style={[styles.torValue, { color: calculatedTOR >= 0 ? "#16A34A" : "#DC2626" }]}>
+                    {calculatedTOR.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
+                </View>
 
                 {/* Save Button */}
                 <TouchableOpacity
@@ -502,16 +489,16 @@ const styles = StyleSheet.create({
     borderColor: "#eee",
     alignItems: "center",
   },
-  cell:         { fontSize: 13, paddingHorizontal: 10 },
-  hCell:        { color: "#fff", fontWeight: "700" },
-  colProject:   { width: 160 },
-  colType:      { width: 140 },
-  colComponent: { width: 140 },
-  colYear:      { width: 140  },
-  colAmount:    { width: 150 },
-  colFinance:   { width: 150 },
-  colProfit:    { width: 150 },
-  colActions:   { width: 170 },
+  cell:       { fontSize: 13, paddingHorizontal: 10 },
+  hCell:      { color: "#fff", fontWeight: "700" },
+  colName:    { width: 170 },
+  colMonth:   { width: 140 },
+  colYear:    { width: 140 },
+  colPct:     { width: 140 },
+  colBase:    { width: 150 },
+  colRev:     { width: 150 },
+  colTor:     { width: 150, fontWeight: "700" },
+  colActions: { width: 160 },
 
   editBtn: { backgroundColor: Colors.PrimaryColor, paddingVertical: 5, paddingHorizontal: 14, borderRadius: 6 },
   delBtn:  { backgroundColor: "#DC2626",           paddingVertical: 5, paddingHorizontal: 14, borderRadius: 6 },
@@ -559,7 +546,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     zIndex: 9999,
     elevation: 8,
-    maxHeight: 180,
+    maxHeight: 160,
   },
   suggestionItem: {
     padding: 12,
@@ -572,12 +559,53 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
+  monthDrop: {
+    position: "absolute",
+    top: 46,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    zIndex: 9999,
+    elevation: 8,
+  },
+  monthItem: { padding: 12, borderBottomWidth: 0.5, borderColor: "#f0f0f0" },
+
+  torPreview: {
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  torLabel: { fontSize: 12, color: "#555", marginBottom: 6 },
+  torValue: { fontSize: 22, fontWeight: "800" },
+
   saveBtn: {
     backgroundColor: Colors.PrimaryColor,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
-    marginTop: 8,
   },
   saveText: { color: "#fff", fontWeight: "800", fontSize: 15 },
 });
+
+
+
+
+
+
+// cell:       { fontSize: 13, paddingHorizontal: 10 },
+// hCell:      { color: "#fff", fontWeight: "700" },
+// colName:    { width: 170 },
+// colMonth:   { width: 140 },
+// colYear:    { width: 140  },
+// colPct:     { width: 140  },
+// colBase:    { width: 150 },
+// colRev:     { width: 150 },
+// colTor:     { width: 150, fontWeight: "700" },
+// colActions: { width: 160 },

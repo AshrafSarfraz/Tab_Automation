@@ -17,7 +17,7 @@ export const Reports=require(ImgPath+'report.png')
 export const RFP=require(ImgPath+'rfp.png')
 export const Budget=require(ImgPath+'Budget.png')
 export const Cashflow=require(ImgPath+'QAR.png')
-
+export const CapexIcon=require(ImgPath+'1-01.png')
 
 
 const IconPath='../assets/icons/'
