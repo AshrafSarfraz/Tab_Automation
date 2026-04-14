@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import CustomHeader from "../../../../component/customHeader";
 import { Colors } from "../../../../themes/color";
+import Container from "../../../../ui/useLayout";
 
 const API_URL = "https://financesystemawh-rtjt.onrender.com/api/tenant";
 
@@ -216,10 +217,9 @@ export default function AddTOR({ navigation }) {
 
   // ── RENDER ──────────────────────────────────────────────────
   return (
-    <>
-      <StatusBar backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-
+       <SafeAreaView style={{ flex: 1, backgroundColor: Colors.PrimaryColor}}>
+          <StatusBar backgroundColor={Colors.PrimaryColor}  barStyle={'light-content'} translucent={false} hidden={false} />
+      <View style={{ flex: 1, backgroundColor: "#fff" }}>
         {/* HEADER */}
         <View style={styles.header}>
           <CustomHeader title="Back" />
@@ -435,8 +435,8 @@ export default function AddTOR({ navigation }) {
           </KeyboardAvoidingView>
         </Modal>
 
+      </View>
       </SafeAreaView>
-    </>
   );
 }
 
@@ -455,8 +455,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingRight: 16,
-    paddingVertical: 6,
-    borderBottomWidth: 0.5,
+
+    borderBottomWidth: 1,
     borderColor: "#ddd",
   },
   actionsWrap: {
@@ -466,16 +466,16 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     height: 36,
-    width: 140,
+    width: 300,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#000",
     borderRadius: 8,
     paddingHorizontal: 10,
     fontSize: 12,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#ffffff",
     color: "#000",
   },
-  addBtn:     { backgroundColor: Colors.PrimaryColor, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10 },
+  addBtn:     { backgroundColor: Colors.PrimaryColor, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6 },
   addBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   center:     { alignItems: "center", justifyContent: "center", paddingVertical: 40 },
 

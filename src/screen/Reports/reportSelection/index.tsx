@@ -79,7 +79,7 @@ const ReportSelection = () => {
               cardBodyStyle={{ paddingLeft: 60,paddingRight:25  }}
 
               no=""
-              title="CapeX Report (CXR)"
+              title="Capex Report (CR)"
               subtitle="Active"
               caption="Payment requests for approved invoices, services, or project-related expenses."
               icon={CapexIcon}
@@ -102,7 +102,7 @@ const ReportSelection = () => {
             <ButtonCard2
               cardBodyStyle={{ paddingLeft: 70,paddingRight:25 }} 
               no=""
-              title="Lease Statement Report"
+              title="Lease Statement Report (LSR) "
               subtitle="Active"
              caption="Lease Statement shows a detailed summary of lease  history for a specific property."
               icon={CapexIcon}
