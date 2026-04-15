@@ -54,10 +54,7 @@ export default function CompanyLpo() {
           paddingBottom: 24,
           paddingTop: 18,
         }}
-        columnWrapperStyle={{
-          justifyContent: 'space-between',
-          marginBottom: GAP,
-        }}
+         columnWrapperStyle={{ justifyContent: 'flex-start', gap: GAP, marginBottom: GAP }}  
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.itemContainer}>
@@ -114,17 +111,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.White,
 
     // subtle border
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderWidth: 0.5,
+    borderColor:Colors.Grey,
 
     // shadow (iOS)
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
     shadowRadius: 14,
-
-    // shadow (Android)
-    elevation: 4,
 
     overflow: 'hidden',
     position: 'relative',

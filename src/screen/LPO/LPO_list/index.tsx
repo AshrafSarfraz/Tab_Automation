@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     borderWidth: 0.5,
-    borderColor:"#000000"
+    borderColor:Colors.Grey
 
   },
 

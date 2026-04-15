@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Dimensions,
   ImageBackground,
   Linking,
+  useWindowDimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
@@ -20,40 +20,72 @@ import {homeLogo, LPO, Reports, RFP} from '../../themes/images';
 import ButtonCard from '../../component/cardBtn/buttonCard';
 import {clearWestwalkMongoTable, syncWestwalkMongoFromApi} from '../../database/westwalkTrailBal';
 
-
-
-
-const {width} = Dimensions.get('window');
-
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const [loading, setLoading] = useState(true); // Initial loader
-  const [pendingCount, setPendingCount] = useState(0);
-  const [lpoList, setLpoList] = useState<any[]>([]);
-  const [RFPcount, setRFPcount] = useState(0);
-  const [RFPList, setRFPList] = useState<any[]>([]);
-  const [username, setUsername] = useState('');
-  const [token, setToken] = useState('');
-  const [syncing, setSyncing] = useState(false); // Loader for refresh/auto-sync
-  const [firstLoadDone, setFirstLoadDone] = useState(false); // To ensure auto-sync runs only once
 
+  // ─────────────────────────────────────────
+  //  BREAKPOINTS
+  //  Tablet   → width >= 1000  (original — kuch nahi badla)
+  //  Foldable → width 700–999
+  //  Mobile   → width < 700
+  // ─────────────────────────────────────────
+  const { width } = useWindowDimensions();
+  const isTablet   = width >= 1000;
+  const isFoldable = width >= 800 && width < 1000;
+  const isMobile   = width < 800;
 
-  
+  // ─────────────────────────────────────────
+  //  DYNAMIC VALUES  (tablet = original value)
+  // ─────────────────────────────────────────
+
+  // Header buttons
+  const btnTop    = isTablet ? 30  : isFoldable ? 20  : 12;
+  const btnHeight = isTablet ? 40  : isFoldable ? 36  : 30;
+  const btnWidth  = isTablet ? 100 : isFoldable ? 88  : 76;
+
+  // RefreshBtn right position = LogoutBtn right + LogoutBtn width + gap
+  const logoutRight  = isTablet ? 40  : isFoldable ? 30  : 16;
+  const refreshRight = logoutRight + btnWidth + 10;
+
+  // Main container
+  const containerPaddingLeft = isTablet ? 30 : isFoldable ? 20 : 10;
+
+  // Btn_Container (card panel)
+  const cardPanelLeft = isTablet ? -85 : isFoldable ? -60 : -55;
+
+  // Odd card row left offset (1st and 3rd card)
+  const oddCardLeft   = isTablet ? -30 : isFoldable ? -30 : -20;
+
+  // Logo touchable size
+  const logoTouchSize = isTablet ? 300 : isFoldable ? 220 : 160;
+  const marginBottom = isTablet ? 5 : isFoldable ? -5 : -15;
+
+  // ─────────────────────────────────────────
+  //  STATE
+  // ─────────────────────────────────────────
+  const [loading, setLoading]             = useState(true);
+  const [pendingCount, setPendingCount]   = useState(0);
+  const [lpoList, setLpoList]             = useState<any[]>([]);
+  const [RFPcount, setRFPcount]           = useState(0);
+  const [RFPList, setRFPList]             = useState<any[]>([]);
+  const [username, setUsername]           = useState('');
+  const [token, setToken]                 = useState('');
+  const [syncing, setSyncing]             = useState(false);
+  const [firstLoadDone, setFirstLoadDone] = useState(false);
+
   useEffect(() => {
-    // Initial load + auto-sync
     loadData(true, false);
   }, []);
 
   const loadData = async (runAutoSync = false, silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const userData = await AsyncStorage.getItem('user');
+      const userData   = await AsyncStorage.getItem('user');
       const parsedUser = userData ? JSON.parse(userData) : null;
       if (!parsedUser) {
         Alert.alert('Error', 'User not found. Please log in again.');
         return;
       }
-
       const username = parsedUser?.username;
       const fkcmpseq = parsedUser?.cmpseq;
       setUsername(username);
@@ -73,19 +105,12 @@ export default function HomeScreen() {
       setRFPList(listRFP);
       setRFPcount(listRFP.length);
 
-      // ---------------- Auto Sync Trial Balance only on first load ----------------
       if (runAutoSync && !firstLoadDone) {
         setSyncing(true);
-      
-        await Promise.all([
-          syncWestwalkMongoFromApi(),
-        ]);
-      
+        await Promise.all([syncWestwalkMongoFromApi()]);
         setSyncing(false);
         setFirstLoadDone(true);
       }
-      
-
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to fetch data.');
     } finally {
@@ -100,39 +125,24 @@ export default function HomeScreen() {
   const handleRefresh = async () => {
     try {
       setSyncing(true);
-  
-      // ✅ Clear old UI data
       setLpoList([]);
       setPendingCount(0);
       setRFPList([]);
       setRFPcount(0);
-  
-      await Promise.all([
-        clearWestwalkMongoTable(),
-      ]);
-      
-      await Promise.all([
-        syncWestwalkMongoFromApi(),
-      ]);
-      // ✅ Fetch fresh API data
+      await Promise.all([clearWestwalkMongoTable()]);
+      await Promise.all([syncWestwalkMongoFromApi()]);
       await loadData(false, true);
-  
-    } catch (e) {
+    } catch (e: any) {
       Alert.alert('Error', e?.message || 'Refresh failed');
     } finally {
       setSyncing(false);
     }
   };
-  
 
   const handleLogout = async () => {
     try {
       await AsyncStorage.clear();
-      await Promise.all([
-        clearWestwalkMongoTable(),
-        
-      ]);
-      
+      await Promise.all([clearWestwalkMongoTable()]);
     } catch (e: any) {
       console.log('Logout cleanup error:', e?.message);
     } finally {
@@ -140,21 +150,23 @@ export default function HomeScreen() {
     }
   };
 
-
-
-
   return (
     <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
       <ImageBackground source={require('../../assets/images/bg1.png')}>
-        
-        {/* ---------------- Single Center Loader ---------------- */}
-        {(loading || syncing) && (
-          <View style={styles.loaderOverlay}>
-            <ActivityIndicator size="large" color={Colors.PrimaryColor} />
-          </View>
-        )}
 
-        <TouchableOpacity style={styles.RefreshBtn} onPress={handleRefresh} disabled={syncing}>
+        {/* ── Refresh Button ── */}
+        <TouchableOpacity
+          style={[
+            styles.RefreshBtn,
+            {
+              right:  refreshRight,
+              top:    btnTop,
+              height: btnHeight,
+              width:  btnWidth,
+            },
+          ]}
+          onPress={handleRefresh}
+          disabled={syncing}>
           {syncing ? (
             <ActivityIndicator size="small" color={Colors.PrimaryColor} />
           ) : (
@@ -162,24 +174,47 @@ export default function HomeScreen() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.LogoutBtn} onPress={handleLogout}>
+        {/* ── Logout Button ── */}
+        <TouchableOpacity
+          style={[
+            styles.LogoutBtn,
+            {
+              right:  logoutRight,
+              top:    btnTop,
+              height: btnHeight,
+              width:  btnWidth,
+            },
+          ]}
+          onPress={handleLogout}>
           <MyText type="btnTxt" status="white">
             Log out
           </MyText>
         </TouchableOpacity>
 
-        <View style={styles.Container}>
+        {/* ── Main Row ── */}
+        <View style={[styles.Container, { paddingLeft: containerPaddingLeft }]}>
+
+          {/* Logo */}
           <View style={styles.Img_Cont}>
             <ImageBackground
               source={homeLogo}
-              style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}
+              style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
               imageStyle={styles.HomeLogo}>
-              <TouchableOpacity style={styles.bTN} onPress={handlePress} />
+              <TouchableOpacity
+                style={[
+                  styles.bTN,
+                  { width: logoTouchSize, height: logoTouchSize },
+                ]}
+                onPress={handlePress}
+              />
             </ImageBackground>
           </View>
 
-          <View style={styles.Btn_Container}>
-            <View style={{left: -30, marginBottom: 5}}>
+          {/* Cards panel */}
+          <View style={[styles.Btn_Container, { left: cardPanelLeft }]}>
+
+            {/* LPO — odd (shifted left) */}
+            <View style={{ left: oddCardLeft,marginBottom }}>
               <ButtonCard
                 no={pendingCount}
                 title="Pending Approvals ( LPO )"
@@ -190,7 +225,9 @@ export default function HomeScreen() {
                 onPress={() => navigation.navigate('companyLpo', {lpoList})}
               />
             </View>
-            <View>
+
+            {/* Finance Reports — even (centred) */}
+            <View style={{marginBottom:marginBottom}} >
               <ButtonCard
                 no="3"
                 title="Finance Reports ( FR )"
@@ -201,7 +238,9 @@ export default function HomeScreen() {
                 onPress={() => navigation.navigate('ReportSelection')}
               />
             </View>
-            <View style={{left: -30, marginTop: 5}}>
+
+            {/* RFP — odd (shifted left) */}
+            <View style={{ left: oddCardLeft}}>
               <ButtonCard
                 no={RFPcount}
                 title="Request For Payment ( RFP )"
@@ -212,6 +251,7 @@ export default function HomeScreen() {
                 onPress={() => navigation.navigate('RfpCompanies', {RFPList})}
               />
             </View>
+
           </View>
         </View>
       </ImageBackground>
@@ -219,36 +259,33 @@ export default function HomeScreen() {
   );
 }
 
+// ─────────────────────────────────────────
+//  STATIC STYLES  (values that never change)
+// ─────────────────────────────────────────
 const styles = StyleSheet.create({
   Container: {
     width: '100%',
     flexDirection: 'row',
     height: '100%',
     alignItems: 'center',
-    paddingLeft:30
+    // paddingLeft → inline (dynamic)
   },
   RefreshBtn: {
     position: 'absolute',
-    right: 150,
-    top: 30,
     backgroundColor: '#ffffff',
-    height: 40,
-    width: 100,
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 0.2,
+    // right, top, height, width → inline (dynamic)
   },
   LogoutBtn: {
     position: 'absolute',
-    right: 40,
-    top: 30,
     backgroundColor: 'red',
-    height: 40,
-    width: 100,
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
+    // right, top, height, width → inline (dynamic)
   },
   Img_Cont: {
     width: '50%',
@@ -261,14 +298,13 @@ const styles = StyleSheet.create({
   },
   Btn_Container: {
     width: '50%',
-    left: -85,
+    // left → inline (dynamic)
   },
   bTN: {
-    width: 300,
-    height: 300,
     borderRadius: 200,
     marginRight: 45,
     marginTop: 10,
+    // width, height → inline (dynamic)
   },
   loaderOverlay: {
     position: 'absolute',

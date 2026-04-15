@@ -1,6 +1,10 @@
 // src/screens/LoginScreen.tsx
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, Image, Text, TouchableOpacity, StatusBar, Alert } from 'react-native';
+import {
+  View, TextInput, StyleSheet, Image, Text,
+  TouchableOpacity, StatusBar, Alert,
+  KeyboardAvoidingView, ScrollView, Platform  // ← یہ add کریں
+} from 'react-native';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,7 +13,6 @@ import Loader from '../../../component/indicator';
 import CustomButton from '../../../component/customButton';
 import { Logo_c } from '../../../themes/images';
 import { syncWestwalkMongoFromApi } from '../../../database/westwalkTrailBal';
-
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -24,16 +27,11 @@ export default function LoginScreen({ navigation }) {
       const userDoc = await firestore().collection('users').doc(uid).get();
       if (userDoc.exists) {
         await AsyncStorage.setItem('user', JSON.stringify(userDoc.data()));
-      
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Home' }],
-        });
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
         syncWestwalkMongoFromApi().catch((e) =>
           console.log("Sync failed but login continues:", e)
         );
-      } 
-      else {
+      } else {
         Alert.alert('User record not found.');
       }
     } catch (error) {
@@ -44,24 +42,41 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: Colors.Bg }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // ← iOS اور Android دونوں کے لیے
+    >
       <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
       {loading && <Loader />}
-      <Image source={Logo_c} style={styles.logo} />
-      <TextInput placeholder="Email" style={styles.input} onChangeText={setEmail} />
-      <TextInput placeholder="Password" secureTextEntry style={styles.input} onChangeText={setPassword} />
-      <CustomButton title="Login" onPress={handleLogin} />
-      {/* <CustomButton title="Forgot Password?" onPress={() => navigation.navigate('ForgotPassword')} /> */}
-       {/* <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-        <Text style={styles.signupText}>Don’t have an account? Sign up</Text>
-      </TouchableOpacity>  */}
-    </View>
+
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled" // ← Tap سے keyboard dismiss ہو
+        showsVerticalScrollIndicator={false}
+      >
+        <Image source={Logo_c} style={styles.logo} />
+        <TextInput
+          placeholder="Email"
+          style={styles.input}
+          onChangeText={setEmail}
+          keyboardType="email-address"   // ← Email keyboard
+          autoCapitalize="none"          // ← Capital letters نہ آئیں
+        />
+        <TextInput
+          placeholder="Password"
+          secureTextEntry
+          style={styles.input}
+          onChangeText={setPassword}
+        />
+        <CustomButton title="Login" onPress={handleLogin} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,               // ← flex: 1 کی جگہ flexGrow: 1
     backgroundColor: Colors.Bg,
     justifyContent: 'center',
     padding: 32,
@@ -73,7 +88,6 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   input: {
-    
     backgroundColor: Colors.White,
     padding: 16,
     borderRadius: 10,
