@@ -47,7 +47,7 @@ const MONTH_W = 100;
 // ✅ Westwalk companies condition (KEEP for rules)
 const C_RE = "West Walk Real Estate";
 const C_ADV = "West Walk Advertisement";
-const C_ASSETS = "Assets Services Company";
+const C_ASSETS = "Assets Services";
 const WESTWALK_COMPANIES = new Set([C_RE, C_ADV, C_ASSETS]);
 
 // ✅ Company-wise Component Collapse/Expand Groups

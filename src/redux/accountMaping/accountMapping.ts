@@ -10,6 +10,7 @@ export const accountMapping = {
      "44105": { company: "West Walk Real Estate", component: "Turnover Rent", type: "Revenue" },
      
 
+     
      "44130": { company: "Assets Services Company",  component: "Chilled Water", type: "Revenue" },
      "44128": { company: "Assets Services Company", component: "LPG", type: "Revenue" },
      "44104": { company: "Assets Services Company", component: "Tenant Variation Request", type: "Revenue" },
@@ -19,13 +20,15 @@ export const accountMapping = {
      "44125": { company: "Assets Services Company", component: "Tenant Variation Request", type: "Revenue" },
 
 
+
      "44136": { company: "West Walk Advertisement", component: "Digital Marketing", type: "Revenue" },
      "44137": { company: "West Walk Advertisement", component: "Events", type: "Revenue" },
      "44140": { company: "West Walk Advertisement", component: "Brand Activation", type: "Revenue" },
    
-   
+
 
      "54109": { company: "West Walk Real Estate", component: "Kahramaa", type: "Cost" },
+     "54104": { company: "West Walk Real Estate", component: "Kahramaa", type: "Cost" },
      "64115": { company: "West Walk Real Estate", component: "Internet / Telephones", type: "Cost" },
      "64114": { company: "West Walk Real Estate", component: "Office supply and pantry / Petrol & Car Service", type: "Cost" },
      "64102": { company: "West Walk Real Estate", component: "Professional & Legal", type: "Cost" },

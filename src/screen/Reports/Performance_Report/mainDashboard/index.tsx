@@ -21,8 +21,8 @@ const companies = [
   { id: 1, name: "Group Report",                            logo: Awh     },
   { id: 2, name: "AL WESSIL HOLDING",                      logo: Awh     },
   { id: 3, name: "West Walk Real Estate",                  logo: WW      },
-  { id: 4, name: "West Walk Advertisement",                logo: WWA     },
-  { id: 5, name: "Assets Services Company",                logo: Assets  },
+  { id: 4, name: "West Walk for Advertising",                logo: WWA     },
+  { id: 5, name: "Assets Services",                logo: Assets  },
   { id: 6, name: "Uranus General Contracting Company WLL", logo: Uranisu },
   { id: 7, name: "West Walk Hotel Management",             logo: Retaj   },
 ];
