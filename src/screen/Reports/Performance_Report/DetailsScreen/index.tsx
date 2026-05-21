@@ -46,9 +46,7 @@ const MONTH_W = 100;
 
 // ✅ Westwalk companies condition (KEEP for rules)
 const C_RE = "West Walk Real Estate";
-const C_ADV = "West Walk Advertisement";
-const C_ASSETS = "Assets Services";
-const WESTWALK_COMPANIES = new Set([C_RE, C_ADV, C_ASSETS]);
+
 
 // ✅ Company-wise Component Collapse/Expand Groups
 const COMPANY_COMPONENT_GROUPS: {
@@ -163,7 +161,104 @@ const COMPANY_COMPONENT_GROUPS: {
     { label: "Utility charges", components: new Set(["Electricity and utility charges", "Treated Sewage Effluent (TSE) supply"]) },
     { label: "Travel expenses", components: new Set(["Hotel Accommodation & Travel Cost", "Travel Cost"]) },
   ],
+  "West Walk Real Estate": [
+    {
+      label: "Miscellaneous Income",
+      components: new Set([
+        "Interest Income",
+        "Miscellaneous Income",
+        "Administration fee income",
+        "Fitout service charge",
+        "Interest Income",
+        "Design review fee",
+        "Chilled Water Consumption Charges",
+        "Sponsorship Fee",
+      ]),
+    },
+    {
+      label: "Salaries & Benefits",
+      components: new Set([
+        "Salaries",
+        "Incentives",
+        "Employee end of service benefits",
+        "Staff Welfare Payments",
+        "Staff Accomodation Rent",
+      ]),
+    },
+    {
+      label: "Assets Depreciation",
+      components: new Set([
+        "Assets Depreciation - Motor Vehicles",
+        "Assets Depreciation - Furniture & Fixtures",
+        "Assets Depreciation - Office Equipments",
+        "Assets Depreciation - Operating Supplies & Equipment",
+      ]),
+    },
+    {
+      label: "Professional Fees",
+      components: new Set([
+        "Consultancy fees",
+        "Bank Charges",
+        "IT Outsourcing Services",
+        "Other Professional Fees",
+        "Legal Fees"
+
+      ]),
+    },
+    {
+      label: "Office Expense",
+      components: new Set([
+        "Other Office Expenses",
+        "Printing & Stationery",
+        "Visa & Government Levies",
+        "Local Transport",
+        "Internet / Telephone",
+         "Office Supply / Petrol"
+      ]), },
+    
+    
+    ] ,  
+    "Assets Services": [
+      {
+        label: "Salaries & Benefits",
+        components: new Set([
+          "Salaries",
+          "Incentives",
+          "Leave Salary",
+        ]),
+      },
+
+      {
+        label: "Professional Fees",
+        components: new Set([
+          "Consultancy fees",
+          "Bank Charges",
+          "Commission Expense",
+        ]),
+      }, 
+      ],
+      "West Walk for Advertising": [
+        {
+          label: "Salaries & Benefits",
+          components: new Set([
+            "Salaries",
+            "Incentives",
+            "Staff Welfare Payments",
+            "Vacation Tickets",
+            "Local Transport",
+          ]),
+        },
+        {
+          label: "Professional Fees",
+          components: new Set([
+            "Bank Charges",
+            "Professional Fees - Tax",
+          ]),
+        }, 
+        ]      
 };
+
+
 
 // ✅ company+component -> group label helper
 const getGroupLabelForCompanyComponent = (companyName: string, component?: string) => {
@@ -274,38 +369,7 @@ const extractRowsFromSnap = (snap: any): ApiRow[] => {
   return [];
 };
 
-// ======= Net Profit builders (RAW sign world) =======
-const sumMonthly = (
-  all: TrialBalanceRow[],
-  company: string,
-  year: number,
-  type: "Revenue" | "Cost",
-  field: "balanceFirst" | "budgetedAmount"
-) => {
-  const out = Array(12).fill(0);
-  for (const r of all) {
-    if (String(r.company || "").trim() !== String(company).trim()) continue;
-    if (Number(r.year) !== Number(year)) continue;
-    if (String(r.type || "").trim() !== type) continue;
-    if (!isValidMonth(r.month)) continue;
 
-    const idx = Number(r.month) - 1;
-    out[idx] += Number((r as any)[field] || 0);
-  }
-  return out;
-};
-
-const netProfitMonthlyRaw = (all: TrialBalanceRow[], company: string, year: number) => {
-  const rev = sumMonthly(all, company, year, "Revenue", "balanceFirst");
-  const cst = sumMonthly(all, company, year, "Cost", "balanceFirst");
-  return rev.map((v, i) => Number(v || 0) + Number(cst[i] || 0));
-};
-
-const budgetNetProfitMonthlyRaw = (all: TrialBalanceRow[], company: string, year: number) => {
-  const rev = sumMonthly(all, company, year, "Revenue", "budgetedAmount");
-  const cst = sumMonthly(all, company, year, "Cost", "budgetedAmount");
-  return rev.map((v, i) => Number(v || 0) + Number(cst[i] || 0));
-};
 
 export default function TrialBalanceTableScreen() {
   const route = useRoute<any>();
@@ -393,169 +457,29 @@ export default function TrialBalanceTableScreen() {
         const snap = await getWestwalkMongoFromSQLite();
         const rawRows = extractRowsFromSnap(snap);
 
-        // normalize
-        let all = rawRows.map(normalize);
+// normalize
+let all = rawRows.map(normalize);
 
-        // cc2 only meaningful for RE revenue; clear for other companies revenue
-        all = all.map((r) => {
-          const cmp = String(r.company || "").trim();
-          const t = String(r.type || "").trim();
-          if (t === "Revenue" && cmp !== C_RE) return { ...r, cc2: "" };
-          return r;
-        });
+// cc2 only meaningful for RE revenue; clear for other companies revenue
+all = all.map((r) => {
+  const cmp = String(r.company || "").trim();
+  const t = String(r.type || "").trim();
+  if (t === "Revenue" && cmp !== C_RE) return { ...r, cc2: "" };
+  return r;
+});
 
-        // base current/prev for selected company
-        let curr = all.filter((r) => r.company === compParam && r.year === yearParam);
-        let prev = all.filter((r) => r.company === compParam && r.year === prevYear);
+// base current/prev for selected company
+let curr = all.filter((r) => r.company === compParam && r.year === yearParam);
+let prev = all.filter((r) => r.company === compParam && r.year === prevYear);
 
-        // ✅ TRANSFER INTO C_RE (same business logic)
-        if (compParam === C_RE) {
-          const advNetA = netProfitMonthlyRaw(all, C_ADV, yearParam);
-          const advNetB = budgetNetProfitMonthlyRaw(all, C_ADV, yearParam);
-          const advNetP = netProfitMonthlyRaw(all, C_ADV, prevYear);
+// ✅ REMOVE ALL TRANSFER / OFFSET LOGIC
+// No Marketing Rights synthetic row
+// No FM COST synthetic row
+// No Westwalk Contract offset row
 
-          const marketingRightsRowsCurr: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
-            type: "Revenue",
-            company: C_RE,
-            component: "Marketing Rights",
-            year: yearParam,
-            month: i + 1,
-            accountno: "__NET_ADV__",
-            cc3code: "MR",
-            auxcode: "",
-            balanceFirst: Number(advNetA[i] || 0),
-            budgetedAmount: Number(advNetB[i] || 0),
-            cc2: "",
-          }));
-
-          const marketingRightsRowsPrev: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
-            type: "Revenue",
-            company: C_RE,
-            component: "Marketing Rights",
-            year: prevYear,
-            month: i + 1,
-            accountno: "__NET_ADV__",
-            cc3code: "MR",
-            auxcode: "",
-            balanceFirst: Number(advNetP[i] || 0),
-            budgetedAmount: 0,
-            cc2: "",
-          }));
-
-          const assetsNetA = netProfitMonthlyRaw(all, C_ASSETS, yearParam);
-          const assetsNetB = budgetNetProfitMonthlyRaw(all, C_ASSETS, yearParam);
-          const assetsNetP = netProfitMonthlyRaw(all, C_ASSETS, prevYear);
-
-          const fmCostRowsCurr: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
-            type: "Cost",
-            company: C_RE,
-            component: "FM COST",
-            year: yearParam,
-            month: i + 1,
-            accountno: "__NET_ASSETS__",
-            cc3code: "",
-            auxcode: "FMC",
-            balanceFirst: Number(assetsNetA[i] || 0),
-            budgetedAmount: Number(assetsNetB[i] || 0),
-            cc2: "",
-          }));
-
-          const fmCostRowsPrev: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
-            type: "Cost",
-            company: C_RE,
-            component: "FM COST",
-            year: prevYear,
-            month: i + 1,
-            accountno: "__NET_ASSETS__",
-            cc3code: "",
-            auxcode: "FMC",
-            balanceFirst: Number(assetsNetP[i] || 0),
-            budgetedAmount: 0,
-            cc2: "",
-          }));
-
-          curr = curr.concat(marketingRightsRowsCurr, fmCostRowsCurr);
-          prev = prev.concat(marketingRightsRowsPrev, fmCostRowsPrev);
-        }
-
-        // ✅ OFFSET inside source companies (same logic)
-        if (compParam === C_ASSETS) {
-          const assetsNetA = netProfitMonthlyRaw(all, C_ASSETS, yearParam);
-          const assetsNetB = budgetNetProfitMonthlyRaw(all, C_ASSETS, yearParam);
-          const assetsNetP = netProfitMonthlyRaw(all, C_ASSETS, prevYear);
-
-          const offsetAssetsCurr: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
-            type: "Revenue",
-            company: C_ASSETS,
-            component: "Westwalk Contract",
-            year: yearParam,
-            month: i + 1,
-            accountno: "__OFFSET_ASSETS_NET__",
-            cc3code: "WWC",
-            auxcode: "",
-            balanceFirst: -Number(assetsNetA[i] || 0),
-            budgetedAmount: -Number(assetsNetB[i] || 0),
-            cc2: "",
-          }));
-
-          const offsetAssetsPrev: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
-            type: "Revenue",
-            company: C_ASSETS,
-            component: "Westwalk Contract",
-            year: prevYear,
-            month: i + 1,
-            accountno: "__OFFSET_ASSETS_NET__",
-            cc3code: "WWC",
-            auxcode: "",
-            balanceFirst: -Number(assetsNetP[i] || 0),
-            budgetedAmount: 0,
-            cc2: "",
-          }));
-
-          curr = curr.concat(offsetAssetsCurr);
-          prev = prev.concat(offsetAssetsPrev);
-        }
-
-        if (compParam === C_ADV) {
-          const advNetA = netProfitMonthlyRaw(all, C_ADV, yearParam);
-          const advNetB = budgetNetProfitMonthlyRaw(all, C_ADV, yearParam);
-          const advNetP = netProfitMonthlyRaw(all, C_ADV, prevYear);
-
-          const offsetAdvCurr: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
-            type: "Cost",
-            company: C_ADV,
-            component: "Westwalk Contract",
-            year: yearParam,
-            month: i + 1,
-            accountno: "__OFFSET_ADV_NET__",
-            cc3code: "",
-            auxcode: "WWC",
-            balanceFirst: -Number(advNetA[i] || 0),
-            budgetedAmount: -Number(advNetB[i] || 0),
-            cc2: "",
-          }));
-
-          const offsetAdvPrev: TrialBalanceRow[] = Array.from({ length: 12 }).map((_, i) => ({
-            type: "Cost",
-            company: C_ADV,
-            component: "Westwalk Contract",
-            year: prevYear,
-            month: i + 1,
-            accountno: "__OFFSET_ADV_NET__",
-            cc3code: "",
-            auxcode: "WWC",
-            balanceFirst: -Number(advNetP[i] || 0),
-            budgetedAmount: 0,
-            cc2: "",
-          }));
-
-          curr = curr.concat(offsetAdvCurr);
-          prev = prev.concat(offsetAdvPrev);
-        }
-
-        // filter by type param
-        if (typeParam) curr = curr.filter((r) => String(r.type) === typeParam);
-        if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
+// filter by type param
+if (typeParam) curr = curr.filter((r) => String(r.type) === typeParam);
+if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
 
         // prev totals
         const prevTotalsMonthlyByType: Record<string, number[]> = {
@@ -627,7 +551,7 @@ export default function TrialBalanceTableScreen() {
         
           const unified: RowItem[] = [];
         
-          // keys.forEach((k) => {
+ 
           //   const currRows = currByKey[k] || [];
           //   const prevRows = prevByKey[k] || [];
         
