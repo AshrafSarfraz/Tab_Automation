@@ -1,4 +1,3 @@
-
 // TrialBalance.tsx
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -255,6 +254,7 @@ const COMPANY_COMPONENT_GROUPS: {
             "Professional Fees - Tax",
           ]),
         }, 
+     
         ]      
 };
 
@@ -382,10 +382,6 @@ export default function TrialBalanceTableScreen() {
 
   const isBudgetMode = mode === "budget";
 
-  const rightContentWidth = isBudgetMode
-    ? BUDGET_TOTAL_W + 12 * MONTH_W
-    : TOTAL_W + PREV_W + BUDGET_TOTAL_W + 12 * (3 * MONTH_W);
-
   const compParam = String(company || "").trim();
   const typeParam = String(type || "").trim();
   const yearParam = Number(year || 0);
@@ -395,6 +391,18 @@ export default function TrialBalanceTableScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  // ✅ NEW: independent column toggles (dono ek saath toggle ho sakte hain)
+  const [showPrev, setShowPrev] = useState(true); // Previous (P) columns
+  const [showBudget, setShowBudget] = useState(true); // Budget (B) columns
+
+  // per-month sub-cols: A always; P & B optional
+  const monthColCount = 1 + (showPrev ? 1 : 0) + (showBudget ? 1 : 0);
+  const leadTotalsWidth = TOTAL_W + (showPrev ? PREV_W : 0) + (showBudget ? BUDGET_TOTAL_W : 0);
+
+  const rightContentWidth = isBudgetMode
+    ? BUDGET_TOTAL_W + 12 * MONTH_W
+    : leadTotalsWidth + 12 * (monthColCount * MONTH_W);
 
   const toggleGroup = (key: string) => setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
@@ -550,45 +558,6 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
           });
         
           const unified: RowItem[] = [];
-        
- 
-          //   const currRows = currByKey[k] || [];
-          //   const prevRows = prevByKey[k] || [];
-        
-          //   // ✅ base ALWAYS from CURRENT row (so component/code stays correct)
-          //   const base = (currRows[0]) as TrialBalanceRow;
-        
-          //   const balancesA = Array(12).fill(0);
-          //   const budgetB = Array(12).fill(0);
-          //   const prevP = Array(12).fill(0);
-        
-          //   currRows.forEach((r) => { 
-          //     if (!isValidMonth(r.month)) return;
-          //     const idx = Number(r.month) - 1;
-          //     balancesA[idx] += Number(r.balanceFirst || 0);
-          //     budgetB[idx] += Number(r.budgetedAmount || 0);
-          //   });
-        
-          //   // ✅ prev ONLY fills values for the SAME key (no new rows)
-          //   prevRows.forEach((r) => {
-          //     if (!isValidMonth(r.month)) return;
-          //     const idx = Number(r.month) - 1;
-          //     prevP[idx] += Number(r.balanceFirst || 0);
-          //   });
-        
-          //   unified.push({
-          //     ...base,
-          //     type: t,
-          //     company: compParam,
-          //     year: yearParam,
-          //     totalBalances: balancesA,
-          //     totalSum: sumArr(balancesA),
-          //     budgetMonthly: budgetB,
-          //     budgetSum: sumArr(budgetB),
-          //     prevMonthlyBalances: prevP,
-          //     prevYearSum: sumArr(prevP),
-          //   } as RowItem);
-          // });
         
           // ✅ rest (group by component label) bilkul same rehne do
           keys.forEach((k) => {
@@ -807,19 +776,22 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
     return (
       <View style={[styles.bodyRow, { height: ROW_HEIGHT }]}>
         {!isBudgetMode && (
-          <>
-            <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W }]}>
-              {ctotal.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-            </Text>
-            <Text numberOfLines={1} style={[styles.cell, { width: PREV_W }]}>
-              {Number(prev).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-            </Text>
-          </>
+          <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W }]}>
+            {ctotal.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+          </Text>
         )}
 
-        <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W }]}>
-          {Number(btotal).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-        </Text>
+        {!isBudgetMode && showPrev && (
+          <Text numberOfLines={1} style={[styles.cell, { width: PREV_W }]}>
+            {Number(prev).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+          </Text>
+        )}
+
+        {(isBudgetMode || showBudget) && (
+          <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W }]}>
+            {Number(btotal).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+          </Text>
+        )}
 
         {months.map((_, i) => {
           const bodyCellStyle = [
@@ -841,12 +813,16 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
               <Text numberOfLines={1} style={bodyCellStyle}>
                 {(cbals[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
               </Text>
-              <Text numberOfLines={1} style={bodyCellStyle}>
-                {(pmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-              </Text>
-              <Text numberOfLines={1} style={bodyCellStyle}>
-                {(bmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-              </Text>
+              {showPrev && (
+                <Text numberOfLines={1} style={bodyCellStyle}>
+                  {(pmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                </Text>
+              )}
+              {showBudget && (
+                <Text numberOfLines={1} style={bodyCellStyle}>
+                  {(bmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                </Text>
+              )}
             </React.Fragment>
           );
         })}
@@ -879,19 +855,22 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
     >
       <View style={[styles.headerRow, { width: rightContentWidth, height: HEADER_HEIGHT, backgroundColor: "#ffffff" }]}>
         {!isBudgetMode && (
-          <>
-            <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W, fontWeight: "bold", textAlign: "center" }]}>
-              Total (A)
-            </Text>
-            <Text numberOfLines={1} style={[styles.cell, { width: PREV_W, fontWeight: "bold", textAlign: "center" }]}>
-              Total (P)
-            </Text>
-          </>
+          <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W, fontWeight: "bold", textAlign: "center" }]}>
+            Total (A)
+          </Text>
         )}
 
-        <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold", textAlign: "center" }]}>
-          Total (B)
-        </Text>
+        {!isBudgetMode && showPrev && (
+          <Text numberOfLines={1} style={[styles.cell, { width: PREV_W, fontWeight: "bold", textAlign: "center" }]}>
+            Total (P)
+          </Text>
+        )}
+
+        {(isBudgetMode || showBudget) && (
+          <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold", textAlign: "center" }]}>
+            Total (B)
+          </Text>
+        )}
 
         {months.map((m, i) => {
           const headerCellStyle = [
@@ -911,8 +890,8 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
           return (
             <React.Fragment key={`h-${m}`}>
               <Text numberOfLines={1} style={headerCellStyle}>{`${m} (A)`}</Text>
-              <Text numberOfLines={1} style={headerCellStyle}>{`${m} (P)`}</Text>
-              <Text numberOfLines={1} style={headerCellStyle}>{`${m} (B)`}</Text>
+              {showPrev && <Text numberOfLines={1} style={headerCellStyle}>{`${m} (P)`}</Text>}
+              {showBudget && <Text numberOfLines={1} style={headerCellStyle}>{`${m} (B)`}</Text>}
             </React.Fragment>
           );
         })}
@@ -1054,12 +1033,16 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
             <Text numberOfLines={1} style={bodyCellStyle}>
               {(cbals[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
             </Text>
-            <Text numberOfLines={1} style={bodyCellStyle}>
-              {(pmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-            </Text>
-            <Text numberOfLines={1} style={bodyCellStyle}>
-              {(bmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-            </Text>
+            {showPrev && (
+              <Text numberOfLines={1} style={bodyCellStyle}>
+                {(pmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              </Text>
+            )}
+            {showBudget && (
+              <Text numberOfLines={1} style={bodyCellStyle}>
+                {(bmon[i] || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              </Text>
+            )}
           </React.Fragment>
         );
       });
@@ -1080,19 +1063,22 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
         <View>
           <View style={[styles.bodyRow, { backgroundColor: "#f9fbff", height: ROW_HEIGHT }]}>
             {!isBudgetMode && (
-              <>
-                <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W, fontWeight: "600" }]}>
-                  {Number(totalA).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                </Text>
-                <Text numberOfLines={1} style={[styles.cell, { width: PREV_W, fontWeight: "600" }]}>
-                  {Number(totalP).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                </Text>
-              </>
+              <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W, fontWeight: "600" }]}>
+                {Number(totalA).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              </Text>
             )}
 
-            <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "600" }]}>
-              {Number(totalB).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-            </Text>
+            {!isBudgetMode && showPrev && (
+              <Text numberOfLines={1} style={[styles.cell, { width: PREV_W, fontWeight: "600" }]}>
+                {Number(totalP).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              </Text>
+            )}
+
+            {(isBudgetMode || showBudget) && (
+              <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "600" }]}>
+                {Number(totalB).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+              </Text>
+            )}
 
             {isBudgetMode ? renderBudgetMonths(item, "600", true) : renderTriplets(item, "600", true)}
           </View>
@@ -1130,19 +1116,22 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
           ]}
         >
           {!isBudgetMode && (
-            <>
-              <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W, fontWeight: "bold" }]}>
-                {totalA.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-              </Text>
-              <Text numberOfLines={1} style={[styles.cell, { width: PREV_W, fontWeight: "bold" }]}>
-                {totalP.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-              </Text>
-            </>
+            <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W, fontWeight: "bold" }]}>
+              {totalA.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+            </Text>
           )}
 
-          <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold" }]}>
-            {totalB.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-          </Text>
+          {!isBudgetMode && showPrev && (
+            <Text numberOfLines={1} style={[styles.cell, { width: PREV_W, fontWeight: "bold" }]}>
+              {totalP.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+            </Text>
+          )}
+
+          {(isBudgetMode || showBudget) && (
+            <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W, fontWeight: "bold" }]}>
+              {totalB.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+            </Text>
+          )}
 
           {isBudgetMode ? renderBudgetMonths(item, "bold", false) : renderTriplets(item, "bold", false)}
         </View>
@@ -1159,19 +1148,22 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
     return (
       <View style={[styles.bodyRow, { height: ROW_HEIGHT }]}>
         {!isBudgetMode && (
-          <>
-            <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W }]}>
-              {Number(totalA).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-            </Text>
-            <Text numberOfLines={1} style={[styles.cell, { width: PREV_W }]}>
-              {Number(totalP).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-            </Text>
-          </>
+          <Text numberOfLines={1} style={[styles.cell, { width: TOTAL_W }]}>
+            {Number(totalA).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+          </Text>
         )}
 
-        <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W }]}>
-          {Number(totalB).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-        </Text>
+        {!isBudgetMode && showPrev && (
+          <Text numberOfLines={1} style={[styles.cell, { width: PREV_W }]}>
+            {Number(totalP).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+          </Text>
+        )}
+
+        {(isBudgetMode || showBudget) && (
+          <Text numberOfLines={1} style={[styles.cell, { width: BUDGET_TOTAL_W }]}>
+            {Number(totalB).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+          </Text>
+        )}
 
         {isBudgetMode ? renderBudgetMonths(item, "normal", true) : renderTriplets(item, "normal", true)}
       </View>
@@ -1207,17 +1199,43 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
      <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingRight: 20, borderBottomWidth: 1 }}>
         <CustomHeader title={`${compParam} - ${yearParam}`} />
-        <CustomButton
-          title="Export"
-          onPress={async () => {
-            try {
-              const p = await exportTrialBalanceToXLSX(data, `TrialBalance_${company || "All"}`);
-              console.log("✅ file saved at:", p);
-            } catch (e: any) {
-              console.warn("❌ XLSX export failed:", e?.message ?? e);
-            }
-          }}
-        />
+
+        {/* ✅ Export ke saath column toggle buttons (dono independent) */}
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          {!isBudgetMode && (
+            <>
+              <TouchableOpacity
+                style={[styles.filterBtn, showPrev && styles.filterBtnActive]}
+                onPress={() => setShowPrev((v) => !v)}
+              >
+                <Text style={[styles.filterBtnText, showPrev && styles.filterBtnTextActive]}>
+                  Previous (P)
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.filterBtn, showBudget && styles.filterBtnActive]}
+                onPress={() => setShowBudget((v) => !v)}
+              >
+                <Text style={[styles.filterBtnText, showBudget && styles.filterBtnTextActive]}>
+                  Budget (B)
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          <CustomButton
+            title="Export"
+            onPress={async () => {
+              try {
+                const p = await exportTrialBalanceToXLSX(data, `TrialBalance_${company || "All"}`);
+                console.log("✅ file saved at:", p);
+              } catch (e: any) {
+                console.warn("❌ XLSX export failed:", e?.message ?? e);
+              }
+            }}
+          />
+        </View>
       </View>
 
       <View style={{ flexDirection: "row" }}>
@@ -1301,6 +1319,26 @@ const styles = StyleSheet.create({
   },
   darkBodyCell: {
     backgroundColor: "#EFEFEF",
+  },
+  filterBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.PrimaryColor,
+    backgroundColor: "#fff",
+    marginRight: 8,
+  },
+  filterBtnActive: {
+    backgroundColor: Colors.PrimaryColor,
+  },
+  filterBtnText: {
+    fontSize: 12,
+    color: Colors.PrimaryColor,
+    fontWeight: "600",
+  },
+  filterBtnTextActive: {
+    color: "#fff",
   },
 });
 
