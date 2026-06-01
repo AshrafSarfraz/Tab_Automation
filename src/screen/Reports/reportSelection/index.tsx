@@ -115,12 +115,12 @@ const ReportSelection = () => {
             <ButtonCard2
               cardBodyStyle={{ paddingLeft: 60, paddingRight: 20 }}
               no=""
-              title="Lease Report (LSR)"
+              title="Daily Report"
               subtitle="Active"
-              caption="Lease Statement shows a detailed summary of lease history for a specific property."
+              caption="Daily Report provides a detailed summary of daily activities, updates, and records for a specific property."
               icon={CapexIcon}
               Color="#038645"
-              onPress={() => Alert.alert("Lease Statement Report is currently under development")}
+              onPress={() => navigation.navigate("DailReport")}
             />
           </View>
 

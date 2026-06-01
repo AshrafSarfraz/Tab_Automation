@@ -28,7 +28,7 @@ const companies = [
   // { id: 8, name: "others" },
 ];
 
-const YEARS = [2023, 2024, 2025, 2026];
+const YEARS = [2026];
 
 const CashFlowDashboard = ({ navigation }: any) => {
   const MIN_WIDTH = 100;

@@ -32,7 +32,7 @@ const companies = [
   // { id: 7, name: "Merchants Bridge Holdings Limited", logo: WWA },
 ];
 
-const YEARS = [2023, 2024, 2025, 2026];
+const YEARS = [2026];
 
 const BudgtedDashboard = ({ navigation }: any) => {
   const MIN_WIDTH = 100;

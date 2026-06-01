@@ -32,6 +32,9 @@ import CapexDashboard from '../screen/Reports/CapeX/DashBoard';
 import CapexBalanceScreen from '../screen/Reports/CapeX/AddCapex';
 import TOR_Dashboard from '../screen/Reports/TOR/dashboard';
 import AddTOR from '../screen/Reports/TOR/uploadData';
+import DailReportScreen from '../screen/Reports/DailyReport/DailyReport/PdfListScreen';
+import UploadDailyReport from '../screen/Reports/DailyReport/AddDailyReport/PdfUploadScreen';
+import ViewerDailyReport from '../screen/Reports/DailyReport/PdfViewer/PdfViewerScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -94,7 +97,11 @@ const StackNavigation = () => {
         <Stack.Screen name="AddTOR" component={AddTOR} />
 
 
+        <Stack.Screen name="DailReport" component={DailReportScreen} />
+        <Stack.Screen name="ViewerDailyReport" component={ViewerDailyReport} />
+        <Stack.Screen name="AddDailyReport" component={UploadDailyReport} />
 
+  
       </Stack.Navigator>
     </NavigationContainer>
   );

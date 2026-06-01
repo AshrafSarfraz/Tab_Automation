@@ -468,13 +468,13 @@ export default function TrialBalanceTableScreen() {
 // normalize
 let all = rawRows.map(normalize);
 
-// cc2 only meaningful for RE revenue; clear for other companies revenue
-all = all.map((r) => {
-  const cmp = String(r.company || "").trim();
-  const t = String(r.type || "").trim();
-  if (t === "Revenue" && cmp !== C_RE) return { ...r, cc2: "" };
-  return r;
-});
+// // cc2 only meaningful for RE revenue; clear for other companies revenue
+// all = all.map((r) => {
+//   const cmp = String(r.company || "").trim();
+//   const t = String(r.type || "").trim();
+//   if (t === "Revenue" && cmp !== C_RE) return { ...r, cc2: "" };
+//   return r;
+// });
 
 // base current/prev for selected company
 let curr = all.filter((r) => r.company === compParam && r.year === yearParam);
@@ -525,13 +525,12 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
           const makeKey = (r: TrialBalanceRow) => {
             const acc = String(r.accountno || "").trim();
             const comp = String(r.component || "").trim();
-          
+            
             if (t === "Revenue") {
               const code = String(r.cc3code || "").trim();
-              // ✅ cc2 ko key se hata diya (exact matching ke liye)
-              return `${acc}||${code}`;
+              const comp = String(r.component || "").trim();
+              return `${acc}||${code}||${comp}`;   // ✅ component bhi key mein
             }
-          
             // Cost
             const aux = String(r.auxcode || "").trim();
           
