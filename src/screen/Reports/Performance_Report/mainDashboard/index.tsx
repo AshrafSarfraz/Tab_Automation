@@ -27,7 +27,7 @@ const companies = [
   { id: 7, name: "West Walk Hotel Management",             logo: Retaj   },
 ];
 
-const YEARS = [2026];
+const YEARS = [2026,2025];
 
 const MainDashboard = ({ navigation }: any) => {
   const MIN_WIDTH = 100;

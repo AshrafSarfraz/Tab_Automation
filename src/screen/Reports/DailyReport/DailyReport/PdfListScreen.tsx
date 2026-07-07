@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -15,42 +15,104 @@ import Container from "../../../../ui/useLayout";
 import { Colors } from "../../../../themes/color";
 import CustomHeader from "../../../../component/customHeader";
 
-const API_BASE = "https://financesystemawh-rtjt.onrender.com/api"; // 👈 Apna URL lagao
+const API_BASE = "https://financesystemawh-rtjt.onrender.com/api";
 
-export default function DailReportScreen({ navigation }: any) {
+export default function DailyReportScreen({ navigation }: any) {
   const [pdfs, setPdfs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);       // sirf pehli baar
   const [refreshing, setRefreshing] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // ✅ Cached data ref — compare karne ke liye
+  const cachedPdfs = useRef<any[]>([]);
+  const hasFetchedOnce = useRef(false);
 
   // ─── Fetch PDFs ─────────────────────────────────────────────────────────────
-  const fetchPdfs = async () => {
+  const fetchPdfs = async (showLoader = false) => {
     try {
+      if (showLoader) setLoading(true);
+
       const res = await fetch(`${API_BASE}/dailyReport/all`);
       const json = await res.json();
+
       if (json.success) {
-        setPdfs(json.data);
+        const newData = json.data;
+
+        // ✅ Compare: agar data change hua ho tabhi setState karo
+        const hasChanged =
+          JSON.stringify(newData) !== JSON.stringify(cachedPdfs.current);
+
+        if (hasChanged) {
+          cachedPdfs.current = newData;
+          setPdfs(newData);
+        }
       } else {
-        Alert.alert("Error", json.message || "Failed to fetch PDFs");
+        Alert.alert("Error", json.message || "Failed to fetch reports");
+      }
+    } catch (err) {
+      // Agar pehle data tha toh error mat dikhao — silently fail
+      if (!hasFetchedOnce.current) {
+        Alert.alert("Error", "Could not connect to server");
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      hasFetchedOnce.current = true;
+    }
+  };
+
+  // ✅ Screen focus pe — pehli baar full loader, baad mein background fetch
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFetchedOnce.current) {
+        fetchPdfs(true); // pehli baar → loader dikhao
+      } else {
+        fetchPdfs(false); // baad mein → background mein check karo
+      }
+    }, [])
+  );
+
+  // Manual pull-to-refresh
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchPdfs(false);
+  };
+
+  // ─── Delete PDF ──────────────────────────────────────────────────────────────
+  const handleLongPress = (item: any) => {
+    Alert.alert(
+      "Delete PDF",
+      `Are you sure you want to delete "${item.fileName}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => deletePdf(item) },
+      ]
+    );
+  };
+
+  const deletePdf = async (item: any) => {
+    try {
+      setDeletingId(item._id);
+
+      const res = await fetch(
+        `${API_BASE}/dailyReport?category=${item.category}`,
+        { method: "DELETE" }
+      );
+      const json = await res.json();
+
+      if (json.success) {
+        const updated = cachedPdfs.current.filter((p) => p._id !== item._id);
+        cachedPdfs.current = updated;
+        setPdfs(updated);
+        Alert.alert("Deleted ✅", "PDF has been successfully deleted.");
+      } else {
+        Alert.alert("Error", json.message || "Delete failed");
       }
     } catch (err) {
       Alert.alert("Error", "Could not connect to server");
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setDeletingId(null);
     }
-  };
-
-  // Screen pe focus aate hi refresh
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      fetchPdfs();
-    }, [])
-  );
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchPdfs();
   };
 
   const formatDate = (dateStr: string) => {
@@ -69,73 +131,77 @@ export default function DailReportScreen({ navigation }: any) {
     return `${(kb / 1024).toFixed(1)} MB`;
   };
 
-  // ─── Render Each PDF Card ───────────────────────────────────────────────────
-  const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() =>
-        navigation.navigate("ViewerDailyReport", {
-          pdfUrl: item.fileUrl,
-          fileName: item.fileName,
-        })
-      }
-      activeOpacity={0.85}
-    >
-      <View style={styles.iconBox}>
-        <Text style={styles.cardIcon}>📄</Text>
-      </View>
+  // ─── Render Card ─────────────────────────────────────────────────────────────
+  const renderItem = ({ item }: { item: any }) => {
+    const isDeleting = deletingId === item._id;
 
-      <View style={styles.cardInfo}>
-        <Text style={styles.cardFileName} numberOfLines={1}>
-          {item.fileName}
-        </Text>
-        <Text style={styles.cardCategory}>{item.category}</Text>
-        <Text style={styles.cardMeta}>
-          {formatDate(item.uploadedAt)}
-          {item.size ? `  •  ${formatSize(item.size)}` : ""}
-        </Text>
-      </View>
+    return (
+      <TouchableOpacity
+        style={[styles.card, isDeleting && styles.cardDeleting]}
+        onPress={() =>
+          navigation.navigate("ViewerDailyReport", {
+            pdfUrl: item.fileUrl,
+            fileName: item.fileName,
+          })
+        }
+        onLongPress={() => handleLongPress(item)}
+        delayLongPress={400}
+        activeOpacity={0.85}
+        disabled={isDeleting}
+      >
+        <View style={styles.iconBox}>
+          {isDeleting ? (
+            <ActivityIndicator size="small" color={Colors.PrimaryColor} />
+          ) : (
+            <Text style={styles.cardIcon}>📄</Text>
+          )}
+        </View>
 
-      <Text style={styles.arrow}>›</Text>
-    </TouchableOpacity>
-  );
+        <View style={styles.cardInfo}>
+          <Text style={styles.cardFileName} numberOfLines={1}>
+            {item.fileName}
+          </Text>
+          <Text style={styles.cardCategory}>{item.category}</Text>
+          <Text style={styles.cardMeta}>
+            {formatDate(item.uploadedAt)}
+            {item.size ? `  •  ${formatSize(item.size)}` : ""}
+          </Text>
+        </View>
 
-  // ─── Loading ────────────────────────────────────────────────────────────────
+        {isDeleting ? (
+          <Text style={styles.deletingText}>Deleting...</Text>
+        ) : (
+          <Text style={styles.arrow}>›</Text>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  // ─── First Load ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <Container
-        statusBarColor={Colors.PrimaryColor}
-        statusBarStyle="light-content"
-      >
+      <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
         <StatusBar backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
         <View style={styles.headerWrap}>
           <CustomHeader title="Daily Reports" />
         </View>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.PrimaryColor} />
-          <Text style={styles.loadingText}>Loading PDFs...</Text>
+          <Text style={styles.loadingText}>Loading reports...</Text>
         </View>
       </Container>
     );
   }
 
   return (
-    <Container
-      statusBarColor={Colors.PrimaryColor}
-      statusBarStyle="light-content"
-    >
-      <StatusBar
-        hidden={false}
-        backgroundColor={Colors.PrimaryColor}
-        barStyle="light-content"
-      />
+    <Container statusBarColor={Colors.PrimaryColor} statusBarStyle="light-content">
+      <StatusBar hidden={false} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
 
-      {/* Header */}
       <View style={styles.headerWrap}>
         <CustomHeader title="Daily Reports" />
       </View>
 
-      {/* Upload Button */}
+      {/* Upload Bar */}
       <View style={styles.uploadBar}>
         <Text style={styles.uploadBarText}>
           {pdfs.length} PDF{pdfs.length !== 1 ? "s" : ""} available
@@ -149,13 +215,22 @@ export default function DailReportScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
+      {/* Hint */}
+      {pdfs.length > 0 && (
+        <View style={styles.hintBar}>
+          <Text style={styles.hintText}>
+            💡 Press and hold a card to delete it
+          </Text>
+        </View>
+      )}
+
       {/* Empty State */}
       {pdfs.length === 0 ? (
         <View style={styles.centered}>
           <Text style={styles.emptyIcon}>🗂️</Text>
           <Text style={styles.emptyTitle}>No PDFs uploaded yet</Text>
           <Text style={styles.emptySubtitle}>
-          Please add a PDF before clicking the upload button.
+            No daily reports have been uploaded yet.
           </Text>
           <TouchableOpacity
             style={styles.emptyUploadBtn}
@@ -200,8 +275,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#777",
   },
-
-  // Upload Bar
   uploadBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -212,28 +285,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.4,
     borderBottomColor: "#eee",
   },
-  uploadBarText: {
-    fontSize: 12,
-    color: "#666",
-  },
+  uploadBarText: { fontSize: 12, color: "#666" },
   uploadBtn: {
     backgroundColor: Colors.PrimaryColor,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
   },
-  uploadBtnText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
+  uploadBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  hintBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    backgroundColor: "#fffbeb",
+    borderBottomWidth: 0.4,
+    borderBottomColor: "#fde68a",
   },
-
-  // List
-  list: {
-    padding: 16,
-  },
-
-  // Card
+  hintText: { fontSize: 11, color: "#92400e" },
+  list: { padding: 16 },
   card: {
     backgroundColor: "#fff",
     borderRadius: 14,
@@ -244,6 +312,11 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     marginBottom: 12,
   },
+  cardDeleting: {
+    opacity: 0.5,
+    borderColor: "#fca5a5",
+    backgroundColor: "#fff5f5",
+  },
   iconBox: {
     width: 46,
     height: 46,
@@ -253,18 +326,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  cardIcon: {
-    fontSize: 22,
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  cardFileName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#111",
-    marginBottom: 3,
-  },
+  cardIcon: { fontSize: 22 },
+  cardInfo: { flex: 1 },
+  cardFileName: { fontSize: 14, fontWeight: "700", color: "#111", marginBottom: 3 },
   cardCategory: {
     fontSize: 11,
     color: Colors.PrimaryColor,
@@ -272,17 +336,9 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
     marginBottom: 3,
   },
-  cardMeta: {
-    fontSize: 11,
-    color: "#999",
-  },
-  arrow: {
-    fontSize: 24,
-    color: "#ccc",
-    marginLeft: 8,
-  },
-
-  // Empty
+  cardMeta: { fontSize: 11, color: "#999" },
+  arrow: { fontSize: 24, color: "#ccc", marginLeft: 8 },
+  deletingText: { fontSize: 11, color: "#ef4444", marginLeft: 8 },
   emptyIcon: { fontSize: 52 },
   emptyTitle: { fontSize: 15, fontWeight: "700", color: "#333" },
   emptySubtitle: { fontSize: 12, color: "#888" },
@@ -293,9 +349,5 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
   },
-  emptyUploadText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
-  },
+  emptyUploadText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 });
