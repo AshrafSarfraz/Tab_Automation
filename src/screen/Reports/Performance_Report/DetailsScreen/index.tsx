@@ -614,7 +614,7 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
             const aux = String(r.auxcode || "").trim();
           
             // ✅ empty-aux ko component-wise merge karo (old behaviour)
-            if (!aux) return `MERGED_EMPTYAUX::${comp}`;
+            if (!aux) return `MERGED_EMPTYAUX::${acc}::${comp}`;
           
             return `${acc}||${aux}`;
           };
@@ -832,7 +832,7 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
       </Text>
 
       <Text numberOfLines={1} style={[styles.cell, { width: COMP_W, color: "#333", textAlign: "left" }]}>
-        {child.component}
+      {child.accountno}-{child.component}
       </Text>
 
       <Text numberOfLines={1} style={[styles.cell, { width: CODE_W, color: "#666", textAlign: "left" }]}>
