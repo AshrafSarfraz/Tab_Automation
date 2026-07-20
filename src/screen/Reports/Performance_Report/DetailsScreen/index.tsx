@@ -607,14 +607,13 @@ if (typeParam) prev = prev.filter((r) => String(r.type) === typeParam);
             
             if (t === "Revenue") {
               const code = String(r.cc3code || "").trim();
-              const comp = String(r.component || "").trim();
-              return `${acc}||${code}||${comp}`;   // ✅ component bhi key mein
+              return `${acc}||${code}||`;   // ✅ component bhi key mein
             }
             // Cost
             const aux = String(r.auxcode || "").trim();
           
             // ✅ empty-aux ko component-wise merge karo (old behaviour)
-            if (!aux) return `MERGED_EMPTYAUX::${acc}::${comp}`;
+            if (!aux) return `MERGED_EMPTYAUX::${acc}`;
           
             return `${acc}||${aux}`;
           };
