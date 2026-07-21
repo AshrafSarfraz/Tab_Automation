@@ -18,7 +18,8 @@ import Container from '../../ui/useLayout';
 import MyText from '../../ui/AppText';
 import {homeLogo, LPO, Reports, RFP} from '../../themes/images';
 import ButtonCard from '../../component/cardBtn/buttonCard';
-import {clearWestwalkMongoTable, syncWestwalkMongoFromApi} from '../../database/westwalkTrailBal';
+import {clearWestwalkMongoTable, syncWestwalkMongoFromApi} from '../../database/PerformanceReport';
+import { clearCashFlowTable, syncCashFlowFromApi } from '../../database/cashFlow';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
@@ -131,6 +132,8 @@ export default function HomeScreen() {
       setRFPcount(0);
       await Promise.all([clearWestwalkMongoTable()]);
       await Promise.all([syncWestwalkMongoFromApi()]);
+      await Promise.all([clearCashFlowTable()]);
+      await Promise.all([syncCashFlowFromApi()]);
       await loadData(false, true);
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Refresh failed');

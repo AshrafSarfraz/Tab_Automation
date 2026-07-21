@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensions } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
-import { getWestwalkMongoFromSQLite } from "../../database/westwalkTrailBal";
+import { getWestwalkMongoFromSQLite } from "../../database/PerformanceReport";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const KEEP_COST_NEGATIVE = true;

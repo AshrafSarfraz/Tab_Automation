@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
-import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal"; // ✅ SINGLE API
+import { getWestwalkMongoFromSQLite } from "../../../database/PerformanceReport"; // ✅ SINGLE API
 import GroupedBarChart2 from "../GroupBarChart";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];

@@ -11,23 +11,14 @@ import LpoListScreen from '../screen/LPO/LPO_list';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import WebViewScreen from '../screen/LPO/WebView';
 import CompanyLpo from '../screen/LPO/companies';
-
-
-
-
 import ReportSelection from '../screen/Reports/reportSelection';
 import mainDashboard from '../screen/Reports/Performance_Report/mainDashboard';
-
 import TrialBalanceTableScreen from '../screen/Reports/Performance_Report/DetailsScreen';
 import CsvUploadScreen from '../screen/Reports/budgted/uploadData';
 import BudgtedDashboard from '../screen/Reports/budgted/budgetedDashboard';
 import RfpCompaniesScreen from '../screen/RFP/RFP_Companies';
 import RfpListByCompany from '../screen/RFP/RFP_List';
 import GroupMonthlySummaryScreen from '../screen/Reports/Performance_Report/GroupDetailScreen';
-import CashFlowDashboard from '../screen/Reports/CashFlow/Dashboard';
-import CashFlowTableScreen from '../screen/Reports/CashFlow/DetailsScreen';
-import AddProjects from '../screen/Reports/CashFlow/AddProjects';
-import CashFlowReportDetails1 from '../screen/Reports/CashFlow/GroupDetailReport';
 import CapexDashboard from '../screen/Reports/CapeX/DashBoard';
 import CapexBalanceScreen from '../screen/Reports/CapeX/AddCapex';
 import TOR_Dashboard from '../screen/Reports/TOR/dashboard';
@@ -35,8 +26,15 @@ import AddTOR from '../screen/Reports/TOR/uploadData';
 import DailReportScreen from '../screen/Reports/DailyReport/DailyReport/PdfListScreen';
 import UploadDailyReport from '../screen/Reports/DailyReport/AddDailyReport/PdfUploadScreen';
 import ViewerDailyReport from '../screen/Reports/DailyReport/PdfViewer/PdfViewerScreen';
+import CashFlowDashboard from '../screen/Reports/CashFlowReport/CashflowDashboard';
+import CashFlowTableScreen from '../screen/Reports/CashFlowReport/CashFlowDetails/DetailScreen';
+import CashFlowCsvUploadScreen from '../screen/Reports/CashFlowReport/UploadCashflow';
+
+
 
 const Stack = createNativeStackNavigator();
+
+
 
 const StackNavigation = () => {
   const [initialRoute, setInitialRoute] = useState<string | null>(null);
@@ -63,30 +61,28 @@ const StackNavigation = () => {
       <Stack.Navigator
         initialRouteName={initialRoute}
         screenOptions={{headerShown: false}}>
-
-        {/* <Stack.Navigator initialRouteName={'Westwalk'} screenOptions={{ headerShown: false }}>  */}
-
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
+       
+        <Stack.Screen name="ReportSelection" component={ReportSelection} />
         <Stack.Screen name="companyLpo" component={CompanyLpo} />
         <Stack.Screen name="LpoList" component={LpoListScreen} />
         <Stack.Screen name="RfpCompanies" component={RfpCompaniesScreen} />
         <Stack.Screen name="RfpListByCompany" component={RfpListByCompany} />
         <Stack.Screen name="WebView" component={WebViewScreen} />
-        <Stack.Screen name="ReportSelection" component={ReportSelection} />
+        
         
         <Stack.Screen name="mainDashboard" component={mainDashboard} />
         <Stack.Screen name="TrialBalanceTable"  component={TrialBalanceTableScreen} />
 
+        <Stack.Screen name="CashFlowDashboard" component={CashFlowDashboard} />
+        <Stack.Screen name="CashFlowCsvUpload" component={CashFlowCsvUploadScreen} />
+        <Stack.Screen name="CashFlowTable" component={CashFlowTableScreen} />
+
         <Stack.Screen name="BudgtedDashboard" component={BudgtedDashboard} />
         <Stack.Screen name="BudgtedTrialBalanceTable"  component={TrialBalanceTableScreen} />
-       
-        <Stack.Screen name="CashFlowDashboard" component={CashFlowDashboard} />
-        <Stack.Screen name="CashFlowTableScreen" component={CashFlowTableScreen} />
-        <Stack.Screen name="CashFlowGroupTableScreen" component={CashFlowReportDetails1} />
-        <Stack.Screen name="AddProjects" component={AddProjects} />
         <Stack.Screen name="Csvupload" component={CsvUploadScreen} />
         <Stack.Screen name="GroupMonthlySummaryScreen"   component={GroupMonthlySummaryScreen} />
 
@@ -95,7 +91,6 @@ const StackNavigation = () => {
 
         <Stack.Screen name="TOR_Dashboard" component={TOR_Dashboard} />
         <Stack.Screen name="AddTOR" component={AddTOR} />
-
 
         <Stack.Screen name="DailReport" component={DailReportScreen} />
         <Stack.Screen name="ViewerDailyReport" component={ViewerDailyReport} />

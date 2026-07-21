@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
-import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal";
+import { getWestwalkMongoFromSQLite } from "../../../database/PerformanceReport";
 import GroupedBarChart from "../GroupBarChart";
 
 

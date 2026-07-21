@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 
 import GroupedBarChart2 from "../GroupBarChart";
-import { getWestwalkMongoFromSQLite } from "../../../database/westwalkTrailBal"; // ✅ ONLY ONE API
+import { getWestwalkMongoFromSQLite } from "../../../database/PerformanceReport"; // ✅ ONLY ONE API
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 

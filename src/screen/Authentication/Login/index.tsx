@@ -12,7 +12,7 @@ import { Colors } from '../../../themes/color';
 import Loader from '../../../component/indicator';
 import CustomButton from '../../../component/customButton';
 import { Logo_c } from '../../../themes/images';
-import { syncWestwalkMongoFromApi } from '../../../database/westwalkTrailBal';
+import { syncWestwalkMongoFromApi } from '../../../database/PerformanceReport';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensions } from "react-native";
 import GroupedBarChart from "./GroupBarChart";
-import { getWestwalkMongoFromSQLite } from "../../database/westwalkTrailBal";
+import { getWestwalkMongoFromSQLite } from "../../database/PerformanceReport";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const FLIP_SIGN = -1;

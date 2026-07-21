@@ -15,7 +15,7 @@ import {
 } from "react-native";
 
 import { useRoute } from "@react-navigation/native";
-import { getWestwalkMongoFromSQLite } from "../../../../database/westwalkTrailBal"; // ✅ SINGLE API ONLY
+import { getWestwalkMongoFromSQLite } from "../../../../database/PerformanceReport"; // ✅ SINGLE API ONLY
 import { Colors } from "../../../../themes/color";
 import CustomHeader from "../../../../component/customHeader";
 import CustomButton from "../../../../component/customButton";
