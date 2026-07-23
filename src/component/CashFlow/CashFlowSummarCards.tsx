@@ -30,12 +30,13 @@ export default function CashFlowSummaryCards({ company, year }: Props) {
         const snap = await getCashFlowFromSQLite();
         const rows = extractRows(snap);
 
-        // ✅ Capital letters handle karo
-        const filtered = rows.filter(
-          (r: any) =>
-            String(r.Company || r.company || "").trim() === String(company || "").trim() &&
-            Number(r.Year || r.year) === Number(year)
-        );
+        // ✅ company empty ho toh sab data (Group Report)
+        const filtered = rows.filter((r: any) => {
+          const yearMatch = Number(r.Year || r.year) === Number(year);
+          if (!company) return yearMatch;
+          return String(r.Company || r.company || "").trim() === String(company).trim() && yearMatch;
+        });
+
         if (mounted) setAllRows(filtered);
       } catch (e: any) {
         if (mounted) setError(e?.message || "Failed to load");
@@ -51,7 +52,6 @@ export default function CashFlowSummaryCards({ company, year }: Props) {
     let inflow = 0;
     let outflow = 0;
     for (const r of allRows) {
-      // ✅ Capital letters handle karo
       const comp = String(r.Component || r.component || "").trim().toLowerCase();
       const amt = Number(r.Amount || 0);
       if (comp === "inflow") inflow += amt;
@@ -63,21 +63,8 @@ export default function CashFlowSummaryCards({ company, year }: Props) {
   const fmt = (n: number) =>
     Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
 
-  if (loading) {
-    return (
-      <View style={[styles.row, { justifyContent: "center" }]}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={[styles.row, { justifyContent: "center" }]}>
-        <Text style={{ color: "red", fontWeight: "700" }}>{error}</Text>
-      </View>
-    );
-  }
+  if (loading) return <View style={[styles.row, { justifyContent: "center" }]}><ActivityIndicator /></View>;
+  if (error) return <View style={[styles.row, { justifyContent: "center" }]}><Text style={{ color: "red", fontWeight: "700" }}>{error}</Text></View>;
 
   return (
     <View style={styles.row}>
@@ -99,11 +86,7 @@ export default function CashFlowSummaryCards({ company, year }: Props) {
 
 const styles = StyleSheet.create({
   row: { width: "100%", flexDirection: "row", gap: 10, paddingHorizontal: 12 },
-  card: {
-    flex: 1, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 12,
-    borderWidth: 1, borderColor: "#E5E5E5", alignItems: "center",
-    justifyContent: "center", minHeight: 80,
-  },
+  card: { flex: 1, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 12, borderWidth: 1, borderColor: "#E5E5E5", alignItems: "center", justifyContent: "center", minHeight: 80 },
   title: { fontSize: 13, fontWeight: "700", marginBottom: 6 },
   value: { fontSize: 18, fontWeight: "800" },
   inflow: { backgroundColor: "#E9F7EC" },

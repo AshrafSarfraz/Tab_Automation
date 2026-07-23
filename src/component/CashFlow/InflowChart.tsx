@@ -1,15 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
-import { getCashFlowFromSQLite } from "../../database/cashFlow";
 import GroupedBarChart2 from "../budgetedChart/GroupBarChart";
+import { getCashFlowFromSQLite } from "../../database/cashFlow";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const ACTUAL_CUTOFF_MONTH = 6;
 
-// ✅ Month name to number
 const monthNames: Record<string, number> = {
-  "january": 1, "february": 2, "march": 3, "april": 4,
-  "may": 5, "june": 6, "july": 7, "august": 8,
-  "september": 9, "october": 10, "november": 11, "december": 12
+  "january":1,"february":2,"march":3,"april":4,"may":5,"june":6,
+  "july":7,"august":8,"september":9,"october":10,"november":11,"december":12
 };
 
 const extractRows = (snap: any) => {
@@ -24,17 +23,12 @@ const extractRows = (snap: any) => {
 function getAmountByMonth(rows: any[], company: string, year: number, component: string) {
   const out = Array(12).fill(0);
   for (const r of rows) {
-    // ✅ Capital letters handle
-    if (String(r.Company || r.company || "").trim() !== String(company || "").trim()) continue;
+    // ✅ company empty ho toh filter skip (Group Report)
+    if (company && String(r.Company || r.company || "").trim() !== String(company).trim()) continue;
     if (Number(r.Year || r.year) !== Number(year)) continue;
     if (String(r.Component || r.component || "").trim().toLowerCase() !== component.toLowerCase()) continue;
-
-    // ✅ Month string ya number dono handle
     const monthRaw = r.Month || r.month;
-    const m = typeof monthRaw === "string"
-      ? monthNames[monthRaw.toLowerCase()]
-      : Number(monthRaw);
-
+    const m = typeof monthRaw === "string" ? monthNames[monthRaw.toLowerCase()] : Number(monthRaw);
     if (!m || m < 1 || m > 12) continue;
     out[m - 1] += Number(r.Amount || 0);
   }
@@ -48,16 +42,12 @@ function niceMaxValue(max: number, expandChart: boolean) {
   return Math.ceil((max * headroom) / step) * step;
 }
 
-export default function CashFlowChart({
+export default function CashFlowInflowChart({
   company, year, height = 300, groupGap = 6,
   expandChart = false, isSidebarCollapsed = false,
 }: {
-  company: string;
-  year: number;
-  height?: number;
-  groupGap?: number;
-  expandChart?: boolean;
-  isSidebarCollapsed?: boolean;
+  company: string; year: number; height?: number;
+  groupGap?: number; expandChart?: boolean; isSidebarCollapsed?: boolean;
 }) {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,29 +73,28 @@ export default function CashFlowChart({
   }, [company, year]);
 
   const chartData = useMemo(() => {
-    const inflow = getAmountByMonth(rows, company, year, "Inflow");
-    const outflow = getAmountByMonth(rows, company, year, "Outflow");
-    return MONTHS.map((label, i) => ({
-      label,
-      inflow: Number(inflow[i] || 0),
-      outflow: Math.abs(Number(outflow[i] || 0)),
-    }));
+    const allInflow = getAmountByMonth(rows, company, year, "Inflow");
+    return MONTHS.map((label, i) => {
+      const isActual = (i + 1) <= ACTUAL_CUTOFF_MONTH;
+      const val = Number(allInflow[i] || 0);
+      return { label, actual: isActual ? val : 0, budget: !isActual ? val : 0 };
+    });
   }, [rows, company, year]);
 
   const chartSeries = useMemo(() => [
-    { key: "inflow", label: `Inflow ${year}`, color: "#1B5E20" },
-    { key: "outflow", label: `Outflow ${year}`, color: "#E53935" },
+    { key: "actual", label: `Actual ${year}`, color: "#1B5E20" },
+    { key: "budget", label: `Budget ${year}`, color: "#FF9800" },
   ], [year]);
 
   const usedWidth = expandChart ? (isSidebarCollapsed ? 1030 : 930) : (isSidebarCollapsed ? 500 : 440);
-  const usedBarWidth = expandChart ? (isSidebarCollapsed ? 11 : 10) : 6;
-  const usedGroupGap = expandChart ? (isSidebarCollapsed ? 28 : 25) : (isSidebarCollapsed ? groupGap : 2);
+  const usedBarWidth = expandChart ? (isSidebarCollapsed ? 20 : 20) : 8;
+  const usedBarGap = expandChart ? (isSidebarCollapsed ? 14 : 12) : 6;
+  const usedGroupGap = expandChart ? (isSidebarCollapsed ? 30 : 23) : (isSidebarCollapsed ? groupGap : 0);
+
 
   const dynamicMaxValue = useMemo(() => {
     let m = 0;
-    for (const row of chartData) {
-      m = Math.max(m, row.inflow, row.outflow);
-    }
+    for (const row of chartData) m = Math.max(m, row.actual, row.budget);
     return niceMaxValue(m, expandChart);
   }, [chartData, expandChart]);
 
@@ -114,22 +103,21 @@ export default function CashFlowChart({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Cash Flow</Text>
+      <Text style={styles.title}>Inflow</Text>
       <View style={{ width: usedWidth }}>
         <GroupedBarChart2
+          skipZeroBars={true}
           data={chartData}
           series={chartSeries}
           maxValue={dynamicMaxValue}
           height={height}
           barWidth={usedBarWidth}
-          barGap={0}
+          barGap={usedBarGap}
           groupGap={usedGroupGap}
           showLegend
           showValuesOnTop={expandChart}
           yAxisOffset={-45}
-          valueFormatter={(v) =>
-            `${(v / 1_000_000).toFixed(1).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1")}M`
-          }
+          valueFormatter={(v) => `${(v/1_000_000).toFixed(1).replace(/\.00$/,"").replace(/(\.\d)0$/,"$1")}M`}
           labelStyle={{ fontSize: 9 }}
         />
       </View>

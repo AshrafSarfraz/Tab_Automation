@@ -6,17 +6,18 @@ import {
 import { Colors } from "../../../themes/color";
 import { Assets, Awh, Back, WW, WWA } from "../../../themes/images";
 import CashFlowSummaryCards from "../../../component/CashFlow/CashFlowSummarCards";
-import CashFlowChart from "../../../component/CashFlow/CashFlowChart";
+import CashFlowInflowChart from "../../../component/CashFlow/InflowChart";
+import CashFlowOutflowChart from "../../../component/CashFlow/OutflowChart";
+import CashFlowNetChart from "../../../component/CashFlow/NetCashFlowChart";
 
-
-
+const GROUP_REPORT = "Group Report";
 
 const companies = [
+  { id: 0, name: GROUP_REPORT, logo: Awh },
   { id: 1, name: "AWH", logo: Awh },
   { id: 2, name: "West Walk", logo: WW },
   { id: 3, name: "Uranus", logo: WWA },
   { id: 4, name: "GII", logo: Assets },
-
 ];
 
 const YEARS = [2026];
@@ -25,7 +26,7 @@ const CashFlowDashboard = ({ navigation }: any) => {
   const MIN_WIDTH = 100;
   const MAX_WIDTH = 220;
 
-  const defaultCompany = companies.find((c) => c.name === "AWH") || companies[0];
+  const defaultCompany = companies.find((c) => c.name === GROUP_REPORT) || companies[0];
 
   const [collapsed, setCollapsed] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(defaultCompany.id);
@@ -44,15 +45,18 @@ const CashFlowDashboard = ({ navigation }: any) => {
     setCollapsed(!collapsed);
   };
 
-  const onViewDetailsPress = () =>
+  const selectedCompanyObj = companies.find((c) => c.id === selectedCompany);
+  const isGroupReport = selectedCompanyObj?.name === GROUP_REPORT;
+
+  // ✅ Group Report pe company="" pass hoga — sab data aayega
+  const companyForCharts = isGroupReport ? "" : selectedCompanyObj?.name || "";
+
+  const onViewDetailsPress = () => {
     navigation.navigate("CashFlowTable", {
-      company: selectedCompanyObj?.name || "",
+      company: isGroupReport ? "" : selectedCompanyObj?.name || "",
       year: selectedYear,
     });
-  
-
-  const selectedCompanyObj = companies.find((c) => c.id === selectedCompany);
-
+  };
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar hidden={true} backgroundColor={Colors.PrimaryColor} barStyle="light-content" />
@@ -69,8 +73,6 @@ const CashFlowDashboard = ({ navigation }: any) => {
               <Pressable onPress={toggleSidebar} style={styles.toggleBtn}>
                 <Text style={styles.toggleBtnIcon}>{collapsed ? ">>" : "<<"}</Text>
               </Pressable>
-
-
             </View>
 
             <ScrollView
@@ -84,6 +86,8 @@ const CashFlowDashboard = ({ navigation }: any) => {
               {companies.map((c) => {
                 const isSelected = selectedCompany === c.id;
                 const iconSize = collapsed ? 32 : 22;
+                const isGroup = c.name === GROUP_REPORT;
+
                 return (
                   <Pressable
                     key={c.id}
@@ -91,6 +95,7 @@ const CashFlowDashboard = ({ navigation }: any) => {
                       styles.companyItem,
                       collapsed ? { justifyContent: "center", paddingHorizontal: 0 } : { justifyContent: "flex-start" },
                       isSelected && { backgroundColor: Colors.PrimaryColor },
+                      isGroup && { marginBottom: 14, borderBottomWidth: 1, borderBottomColor: "#ddd", paddingBottom: 14 },
                     ]}
                     onPress={() => setSelectedCompany(c.id)}
                   >
@@ -99,7 +104,9 @@ const CashFlowDashboard = ({ navigation }: any) => {
                       style={[styles.companyIcon, { width: iconSize, height: iconSize, tintColor: isSelected ? "#fff" : undefined }]}
                     />
                     {!collapsed && (
-                      <Text style={[styles.companyName, isSelected && { color: "#fff" }]}>{c.name}</Text>
+                      <Text style={[styles.companyName, isSelected && { color: "#fff" }, isGroup && { fontWeight: "800" }]}>
+                        {c.name}
+                      </Text>
                     )}
                   </Pressable>
                 );
@@ -120,18 +127,22 @@ const CashFlowDashboard = ({ navigation }: any) => {
             </View>
 
             <View style={styles.actionsWrap}>
-            <Pressable style={[styles.actionBtn, { backgroundColor: "#fff", borderColor: Colors.PrimaryColor, borderWidth: 2 }]}
-                 onPress={() => navigation.navigate("CashFlowCsvUpload")}>
-              <Text style={[styles.actionText, { color: Colors.PrimaryColor }]}>Add Cash Flow</Text>
-             </Pressable>
+              <Pressable
+                style={[styles.actionBtn, { backgroundColor: "#fff", borderColor: Colors.PrimaryColor, borderWidth: 2 }]}
+                onPress={() => navigation.navigate("CashFlowCsvUpload")}
+              >
+                <Text style={[styles.actionText, { color: Colors.PrimaryColor }]}>Add Cash Flow</Text>
+              </Pressable>
+
               <Pressable style={styles.actionBtn} onPress={() => setExpandChart((p) => !p)}>
                 <Text style={styles.actionText}>{expandChart ? "Collapse Chart" : "Expand Chart"}</Text>
               </Pressable>
-             <Pressable style={styles.actionBtn} onPress={onViewDetailsPress}>
-             <Text style={styles.actionText}>View Details</Text>
-             </Pressable>
 
-
+            
+                <Pressable style={styles.actionBtn} onPress={onViewDetailsPress}>
+                  <Text style={styles.actionText}>View Details</Text>
+                </Pressable>
+          
             </View>
           </View>
 
@@ -155,12 +166,27 @@ const CashFlowDashboard = ({ navigation }: any) => {
             onScrollBeginDrag={() => setShowYears(false)}
           >
             <View style={{ marginTop: 16 }}>
-              <CashFlowSummaryCards company={selectedCompanyObj?.name || ""} year={selectedYear} />
+              <CashFlowSummaryCards
+                company={companyForCharts}
+                year={selectedYear}
+              />
             </View>
 
             <View style={[styles.ChartContainer, expandChart && styles.ChartContainerExpanded]}>
-              <CashFlowChart
-                company={selectedCompanyObj?.name || ""}
+              <CashFlowInflowChart
+                company={companyForCharts}
+                year={selectedYear}
+                expandChart={expandChart}
+                isSidebarCollapsed={collapsed}
+              />
+              <CashFlowOutflowChart
+                company={companyForCharts}
+                year={selectedYear}
+                expandChart={expandChart}
+                isSidebarCollapsed={collapsed}
+              />
+              <CashFlowNetChart
+                company={companyForCharts}
                 year={selectedYear}
                 expandChart={expandChart}
                 isSidebarCollapsed={collapsed}
