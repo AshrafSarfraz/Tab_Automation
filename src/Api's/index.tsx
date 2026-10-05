@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const BASE_URL = 'http://78.100.143.83:9507/api';
+const BASE_URL = 'https://westwalk.softwaredesign.ae:9508/WVDApi_ECQ/api';
 
 const westwalkAccounts = [
   41112,44131,44132,41111,44133,44105,64114,
@@ -42,7 +42,7 @@ export const getAuthToken = async (forceRefresh = false) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pageindex:
-            'eyJVc2VybmFtZSI6InJveWFvQHNvZnR3YXJlZGVzaWduLmNvbS5sYiIsIlBhc3N3b3JkIjoiREI4ajlWWjQiLCJEYXRhYmFzZSI6IldFU1RXQUxLIn0=',
+            'eyJVc2VybmFtZSI6Im11aGFtbWFkLnNhYWRAYWx3ZXNzaWxob2xkaW5nLmNvbSIsIlBhc3N3b3JkIjoiRzhUdTJUTnMiLCJEYXRhYmFzZSI6IldFU1RXQUxLIn0=',
         }),
       });
 
